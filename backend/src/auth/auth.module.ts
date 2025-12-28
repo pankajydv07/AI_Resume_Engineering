@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ClerkAuthGuard } from './guards/clerk-auth.guard';
+import { UsersModule } from '../users/users.module';
 
 /**
  * Auth Module
@@ -7,15 +8,16 @@ import { ClerkAuthGuard } from './guards/clerk-auth.guard';
  * Handles authentication via Clerk
  * From apis.md Section 2
  * 
- * PHASE 1: SCAFFOLDING ONLY
- * - Placeholder guard only
- * - No actual JWT validation
+ * PHASE 2: PERSISTENCE LAYER
+ * - ClerkAuthGuard now creates/finds users in database
+ * - Imports UsersModule for user persistence
  * 
- * TODO: Add Clerk SDK
- * TODO: Implement JWT validation
- * TODO: Add auth configuration
+ * TODO (PHASE 3): Add Clerk SDK
+ * TODO (PHASE 3): Implement JWT validation
+ * TODO (PHASE 3): Add auth configuration
  */
 @Module({
+  imports: [UsersModule], // Import to use UsersService in ClerkAuthGuard
   providers: [ClerkAuthGuard],
   exports: [ClerkAuthGuard],
 })

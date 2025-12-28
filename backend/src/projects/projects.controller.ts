@@ -10,12 +10,13 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
  * Handles resume project operations
  * All endpoints from apis.md Section 3
  * 
- * PHASE 1: SCAFFOLDING ONLY
- * - Placeholder auth guard (always allows, injects mock userId)
- * - Placeholder responses only
+ * PHASE 2: PERSISTENCE LAYER
+ * - Real database operations via ProjectsService
+ * - User ownership enforced
+ * - Mock auth still active (real Clerk JWT in PHASE 3)
  */
 @Controller('projects')
-@UseGuards(ClerkAuthGuard) // Placeholder guard - always allows
+@UseGuards(ClerkAuthGuard) // PHASE 2: Creates/finds users in DB
 export class ProjectsController {
   constructor(private readonly projectsService: ProjectsService) {}
 
@@ -24,16 +25,15 @@ export class ProjectsController {
    * Create a new resume project
    * From apis.md Section 3.1
    * 
-   * PHASE 1: Uses placeholder auth
-   * TODO: Implement real Clerk JWT validation
+   * PHASE 2: Real database persistence
+   * TODO (PHASE 3): Implement real Clerk JWT validation
    */
   @Post()
   async createProject(
     @Body() createProjectDto: CreateProjectDto,
-    @CurrentUser() userId: string, // Mock userId from placeholder guard
+    @CurrentUser() userId: string, // Real DB userId from auth guard
   ): Promise<CreateProjectResponseDto> {
-    console.log('[PHASE 1] Mock userId:', userId);
-    return this.projectsService.createProject(createProjectDto);
+    return this.projectsService.createProject(userId, createProjectDto);
   }
 
   /**
@@ -41,15 +41,13 @@ export class ProjectsController {
    * List all resume projects for authenticated user
    * From apis.md Section 3.2
    * 
-   * PHASE 1: Uses placeholder auth
-   * TODO: Implement real Clerk JWT validation
-   * TODO: Filter projects by actual userId from DB
+   * PHASE 2: Real database persistence with user filtering
+   * TODO (PHASE 3): Implement real Clerk JWT validation
    */
   @Get()
   async listProjects(
-    @CurrentUser() userId: string, // Mock userId from placeholder guard
+    @CurrentUser() userId: string, // Real DB userId from auth guard
   ): Promise<ProjectListItemDto[]> {
-    console.log('[PHASE 1] Mock userId:', userId);
-    return this.projectsService.listProjects();
+    return this.projectsService.listProjects(userId);
   }
 }

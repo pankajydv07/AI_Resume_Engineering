@@ -1,5 +1,7 @@
-import { Controller, Get, Put, Post, Param, Body, Query, Res } from '@nestjs/common';
+import { Controller, Get, Put, Post, Param, Body, Query, Res, UseGuards } from '@nestjs/common';
 import { Response } from 'express';
+import { ClerkAuthGuard } from '../auth/guards/clerk-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { VersionsService } from './versions.service';
 import {
   ResumeVersionDto,
@@ -15,11 +17,13 @@ import {
  * Handles resume version operations
  * All endpoints from apis.md Sections 4, 7, 8
  * 
- * PHASE 1: SCAFFOLDING ONLY
- * - No authentication guard yet
- * - Placeholder responses only
+ * PHASE 2: PERSISTENCE LAYER
+ * - ClerkAuthGuard active (mock auth, real DB users)
+ * - Ownership verified via project relationship
+ * - Real database operations for get/save
  */
 @Controller('versions')
+@UseGuards(ClerkAuthGuard)
 export class VersionsController {
   constructor(private readonly versionsService: VersionsService) {}
 
@@ -28,12 +32,14 @@ export class VersionsController {
    * Get a specific resume version
    * From apis.md Section 4.1
    * 
-   * TODO: Add @UseGuards(ClerkAuthGuard)
-   * TODO: Verify user ownership
+   * PHASE 2: Real database query with ownership verification
    */
   @Get(':versionId')
-  async getVersion(@Param('versionId') versionId: string): Promise<ResumeVersionDto> {
-    return this.versionsService.getVersion(versionId);
+  async getVersion(
+    @Param('versionId') versionId: string,
+    @CurrentUser() userId: string,
+  ): Promise<ResumeVersionDto> {
+    return this.versionsService.getVersion(versionId, userId);
   }
 
   /**
@@ -44,15 +50,15 @@ export class VersionsController {
    * Important: NEVER overwrites existing version
    * Creates new version with parentVersionId
    * 
-   * TODO: Add @UseGuards(ClerkAuthGuard)
-   * TODO: Verify user ownership of parent version
+   * PHASE 2: Real database operation, creates new version
    */
   @Put(':versionId')
   async saveEdit(
     @Param('versionId') versionId: string,
     @Body() saveEditDto: SaveResumeEditDto,
+    @CurrentUser() userId: string,
   ): Promise<SaveResumeEditResponseDto> {
-    return this.versionsService.saveEdit(versionId, saveEditDto);
+    return this.versionsService.saveEdit(versionId, saveEditDto, userId);
   }
 
   /**
@@ -60,12 +66,14 @@ export class VersionsController {
    * Compile resume version to PDF
    * From apis.md Section 4.3
    * 
-   * TODO: Add @UseGuards(ClerkAuthGuard)
-   * TODO: Verify user ownership
+   * PHASE 2: Placeholder only (compilation in PHASE 4)
    */
   @Post(':versionId/compile')
-  async compileVersion(@Param('versionId') versionId: string): Promise<CompileResumeResponseDto> {
-    return this.versionsService.compileVersion(versionId);
+  async compileVersion(
+    @Param('versionId') versionId: string,
+    @CurrentUser() userId: string,
+  ): Promise<CompileResumeResponseDto> {
+    return this.versionsService.compileVersion(versionId, userId);
   }
 
   /**
@@ -73,15 +81,15 @@ export class VersionsController {
    * Get diff between two versions
    * From apis.md Section 7.1
    * 
-   * TODO: Add @UseGuards(ClerkAuthGuard)
-   * TODO: Verify user ownership of both versions
+   * PHASE 2: Placeholder only (diff logic in PHASE 4)
    */
   @Get('diff')
   async getVersionDiff(
     @Query('from') fromVersionId: string,
     @Query('to') toVersionId: string,
+    @CurrentUser() userId: string,
   ): Promise<VersionDiffDto> {
-    return this.versionsService.getVersionDiff(fromVersionId, toVersionId);
+    return this.versionsService.getVersionDiff(fromVersionId, toVersionId, userId);
   }
 
   /**
@@ -89,17 +97,16 @@ export class VersionsController {
    * Download PDF version
    * From apis.md Section 8.1
    * 
-   * TODO: Add @UseGuards(ClerkAuthGuard)
-   * TODO: Return file stream or signed URL
-   * TODO: Verify version is COMPILED
+   * PHASE 2: Placeholder only (file storage in PHASE 4)
    */
   @Get(':versionId/download/pdf')
   async downloadPdf(
     @Param('versionId') versionId: string,
+    @CurrentUser() userId: string,
     @Res() res: Response,
   ): Promise<void> {
-    const url = await this.versionsService.downloadPdf(versionId);
-    // Placeholder - redirect to PDF URL
+    const url = await this.versionsService.downloadPdf(versionId, userId);
+    // TODO: PHASE 4 - Return file stream or redirect to signed URL
     res.json({ url });
   }
 
@@ -108,16 +115,16 @@ export class VersionsController {
    * Download LaTeX source
    * From apis.md Section 8.2
    * 
-   * TODO: Add @UseGuards(ClerkAuthGuard)
-   * TODO: Return file stream
+   * PHASE 2: Placeholder only (file download in PHASE 4)
    */
   @Get(':versionId/download/latex')
   async downloadLatex(
     @Param('versionId') versionId: string,
+    @CurrentUser() userId: string,
     @Res() res: Response,
   ): Promise<void> {
-    const content = await this.versionsService.downloadLatex(versionId);
-    // Placeholder - return content as JSON
+    const content = await this.versionsService.downloadLatex(versionId, userId);
+    // TODO: PHASE 4 - Return file stream with proper headers
     res.json({ content });
   }
 }

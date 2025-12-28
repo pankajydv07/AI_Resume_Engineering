@@ -90,6 +90,10 @@ model ResumeProject {
 /// - Versions are NEVER overwritten
 /// - AI always creates a new version
 /// - parentVersionId enables version trees
+///
+/// PHASE 2 HARDENING: onDelete behavior explicit
+/// - Restrict on project: Cannot delete project with versions
+/// - Restrict on parentVersion: Cannot delete version with children
 model ResumeVersion {
   id              String              @id @default(uuid())
   projectId       String
@@ -101,9 +105,9 @@ model ResumeVersion {
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
 
-  // Relations
-  project       ResumeProject   @relation(fields: [projectId], references: [id])
-  parentVersion ResumeVersion?  @relation("VersionTree", fields: [parentVersionId], references: [id])
+  // Relations with explicit delete behavior
+  project       ResumeProject   @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  parentVersion ResumeVersion?  @relation("VersionTree", fields: [parentVersionId], references: [id], onDelete: Restrict)
   childVersions ResumeVersion[] @relation("VersionTree")
   sections      ResumeSection[]
   aiJobs        AIJob[]
@@ -117,6 +121,8 @@ model ResumeVersion {
 /// - Section-wise AI control
 /// - Locking for safety
 /// - Cleaner diffs
+///
+/// PHASE 2 HARDENING: onDelete Restrict on version relation
 model ResumeSection {
   id          String            @id @default(uuid())
   versionId   String
@@ -127,8 +133,8 @@ model ResumeSection {
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
 
-  // Relations
-  version ResumeVersion @relation(fields: [versionId], references: [id])
+  // Relations with explicit delete behavior
+  version ResumeVersion @relation(fields: [versionId], references: [id], onDelete: Restrict)
 }
 
 /// JobDescription (database.md Section 4.5)
@@ -136,6 +142,8 @@ model ResumeSection {
 /// Notes:
 /// - AI analysis output is stored, not recomputed
 /// - JSON is flexible by design
+///
+/// PHASE 2 HARDENING: onDelete Restrict on project relation
 model JobDescription {
   id              String   @id @default(uuid())
   projectId       String
@@ -146,8 +154,8 @@ model JobDescription {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  // Relations
-  project ResumeProject @relation(fields: [projectId], references: [id])
+  // Relations with explicit delete behavior
+  project ResumeProject @relation(fields: [projectId], references: [id], onDelete: Restrict)
   aiJobs  AIJob[]
 }
 
@@ -156,6 +164,8 @@ model JobDescription {
 /// Rules:
 /// - Frontend polls job status
 /// - No synchronous AI calls
+///
+/// PHASE 2 HARDENING: onDelete Restrict on all foreign key relations
 model AIJob {
   id            String      @id @default(uuid())
   projectId     String
@@ -167,10 +177,10 @@ model AIJob {
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
-  // Relations
-  project     ResumeProject   @relation(fields: [projectId], references: [id])
-  baseVersion ResumeVersion   @relation(fields: [baseVersionId], references: [id])
-  jd          JobDescription  @relation(fields: [jdId], references: [id])
+  // Relations with explicit delete behavior
+  project     ResumeProject   @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  baseVersion ResumeVersion   @relation(fields: [baseVersionId], references: [id], onDelete: Restrict)
+  jd          JobDescription  @relation(fields: [jdId], references: [id], onDelete: Restrict)
 }
 
 /// VersionDiff (database.md Section 4.7)
@@ -179,6 +189,8 @@ model AIJob {
 /// - Transparency
 /// - Trust
 /// - Diff UI
+///
+/// PHASE 2 HARDENING: onDelete Restrict on version relations
 model VersionDiff {
   id            String   @id @default(uuid())
   fromVersionId String
@@ -188,7 +200,7 @@ model VersionDiff {
   rewritten     Json
   createdAt     DateTime @default(now())
 
-  // Relations
-  fromVersion ResumeVersion @relation("DiffFrom", fields: [fromVersionId], references: [id])
-  toVersion   ResumeVersion @relation("DiffTo", fields: [toVersionId], references: [id])
+  // Relations with explicit delete behavior
+  fromVersion ResumeVersion @relation("DiffFrom", fields: [fromVersionId], references: [id], onDelete: Restrict)
+  toVersion   ResumeVersion @relation("DiffTo", fields: [toVersionId], references: [id], onDelete: Restrict)
 }

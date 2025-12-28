@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
 import {
   ResumeVersionDto,
   SaveResumeEditDto,
@@ -10,34 +11,78 @@ import {
 /**
  * Versions Service
  * 
- * PHASE 1: SCAFFOLDING ONLY
- * - Returns placeholder data
- * - No database logic
- * - No LaTeX compilation
- * - No version tree logic
+ * PHASE 2: PERSISTENCE LAYER
+ * - Real database operations
+ * - Version creation with parentVersionId tracking
+ * - Ownership enforcement via project relationship
+ * - No LaTeX compilation (future phase)
+ * - No diff logic (future phase)
  * 
  * From apis.md Sections 4, 7, 8
  */
 @Injectable()
 export class VersionsService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Create base version for new project
+   * Called internally by ProjectsService
+   * 
+   * PHASE 2: Real database operation
+   * - Creates initial BASE version with placeholder content
+   * - No parentVersionId (root of version tree)
+   * - Status DRAFT (not compiled yet)
+   */
+  async createBaseVersion(projectId: string, initialContent?: string): Promise<string> {
+    const defaultContent = initialContent || 
+      '\\documentclass{article}\n\\begin{document}\n% Your resume content here\n\\end{document}';
+    
+    const version = await this.prisma.resumeVersion.create({
+      data: {
+        projectId,
+        parentVersionId: null, // Base version has no parent
+        type: 'BASE',
+        status: 'DRAFT',
+        latexContent: defaultContent,
+        pdfUrl: null,
+      },
+    });
+
+    return version.id;
+  }
+
   /**
    * Get a specific resume version
    * From apis.md Section 4.1
    * 
-   * TODO: Implement database logic
-   * TODO: Query ResumeVersion table
-   * TODO: Verify user ownership
+   * PHASE 2: Real database query
+   * - Loads version from database
+   * - Ownership verified via project relationship (userId passed separately)
+   * - Returns exact shape from apis.md
    */
-  async getVersion(versionId: string): Promise<ResumeVersionDto> {
-    // Placeholder response
+  async getVersion(versionId: string, userId: string): Promise<ResumeVersionDto> {
+    const version = await this.prisma.resumeVersion.findUnique({
+      where: { id: versionId },
+      include: { project: true },
+    });
+
+    if (!version) {
+      throw new NotFoundException(`Version ${versionId} not found`);
+    }
+
+    // Verify ownership via project relationship
+    if (version.project.userId !== userId) {
+      throw new ForbiddenException('You do not have access to this version');
+    }
+
     return {
-      versionId,
-      projectId: 'placeholder-project-id',
-      type: 'BASE',
-      status: 'ACTIVE',
-      latexContent: '\\documentclass{article}\n\\begin{document}\nPlaceholder Resume\n\\end{document}',
-      pdfUrl: null,
-      createdAt: new Date().toISOString(),
+      versionId: version.id,
+      projectId: version.projectId,
+      type: version.type,
+      status: version.status,
+      latexContent: version.latexContent,
+      pdfUrl: version.pdfUrl,
+      createdAt: version.createdAt.toISOString(),
     };
   }
 
@@ -45,19 +90,45 @@ export class VersionsService {
    * Save manual resume edit (creates new MANUAL version)
    * From apis.md Section 4.2
    * 
-   * TODO: Implement database logic
-   * TODO: Load parent version
-   * TODO: Create new ResumeVersion with type=MANUAL
-   * TODO: Set parentVersionId
-   * TODO: NEVER update existing version
+   * PHASE 2: Real database operation
+   * - Loads parent version to verify ownership
+   * - Creates NEW version with type=MANUAL
+   * - Sets parentVersionId to track lineage
+   * - NEVER mutates existing version (immutability rule)
    */
   async saveEdit(
     versionId: string,
     saveEditDto: SaveResumeEditDto,
+    userId: string,
   ): Promise<SaveResumeEditResponseDto> {
-    // Placeholder response
+    // Load parent version and verify ownership
+    const parentVersion = await this.prisma.resumeVersion.findUnique({
+      where: { id: versionId },
+      include: { project: true },
+    });
+
+    if (!parentVersion) {
+      throw new NotFoundException(`Version ${versionId} not found`);
+    }
+
+    if (parentVersion.project.userId !== userId) {
+      throw new ForbiddenException('You do not have access to this version');
+    }
+
+    // Create new MANUAL version with parentVersionId
+    const newVersion = await this.prisma.resumeVersion.create({
+      data: {
+        projectId: parentVersion.projectId,
+        parentVersionId: versionId,
+        type: 'MANUAL',
+        status: 'DRAFT',
+        latexContent: saveEditDto.latexContent,
+        pdfUrl: null,
+      },
+    });
+
     return {
-      newVersionId: 'placeholder-new-version-' + Date.now(),
+      newVersionId: newVersion.id,
     };
   }
 
@@ -65,13 +136,29 @@ export class VersionsService {
    * Compile resume version to PDF
    * From apis.md Section 4.3
    * 
-   * TODO: Implement LaTeX compilation
-   * TODO: Upload PDF to S3-compatible storage
-   * TODO: Update version pdfUrl
-   * TODO: Handle compilation errors
+   * PHASE 2: Placeholder with ownership verification (security stub)
+   * TODO: PHASE 4 - Implement LaTeX compilation
+   * TODO: PHASE 4 - Upload PDF to S3-compatible storage
+   * TODO: PHASE 4 - Update version pdfUrl
+   * TODO: PHASE 4 - Handle compilation errors
    */
-  async compileVersion(versionId: string): Promise<CompileResumeResponseDto> {
-    // Placeholder response
+  async compileVersion(versionId: string, userId: string): Promise<CompileResumeResponseDto> {
+    // PHASE 2 HARDENING: Verify ownership even in placeholder
+    const version = await this.prisma.resumeVersion.findUnique({
+      where: { id: versionId },
+      include: { project: true },
+    });
+
+    if (!version) {
+      throw new NotFoundException(`Version ${versionId} not found`);
+    }
+
+    if (version.project.userId !== userId) {
+      throw new ForbiddenException('You do not have access to this version');
+    }
+
+    // TODO: PHASE 4 - Real compilation logic
+    // For now, return placeholder
     return {
       status: 'success',
       errors: [],
@@ -82,13 +169,42 @@ export class VersionsService {
    * Get diff between two versions
    * From apis.md Section 7.1
    * 
-   * TODO: Implement diff logic
-   * TODO: Load both versions from database
-   * TODO: Generate or retrieve VersionDiff
-   * TODO: Parse LaTeX changes
+   * PHASE 2: Placeholder with ownership verification (security stub)
+   * TODO: PHASE 4 - Implement diff logic
+   * TODO: PHASE 4 - Generate or retrieve VersionDiff
+   * TODO: PHASE 4 - Parse LaTeX changes
    */
-  async getVersionDiff(fromVersionId: string, toVersionId: string): Promise<VersionDiffDto> {
-    // Placeholder response
+  async getVersionDiff(fromVersionId: string, toVersionId: string, userId: string): Promise<VersionDiffDto> {
+    // PHASE 2 HARDENING: Verify ownership of BOTH versions even in placeholder
+    const [fromVersion, toVersion] = await Promise.all([
+      this.prisma.resumeVersion.findUnique({
+        where: { id: fromVersionId },
+        include: { project: true },
+      }),
+      this.prisma.resumeVersion.findUnique({
+        where: { id: toVersionId },
+        include: { project: true },
+      }),
+    ]);
+
+    if (!fromVersion) {
+      throw new NotFoundException(`Version ${fromVersionId} not found`);
+    }
+
+    if (!toVersion) {
+      throw new NotFoundException(`Version ${toVersionId} not found`);
+    }
+
+    if (fromVersion.project.userId !== userId) {
+      throw new ForbiddenException('You do not have access to the source version');
+    }
+
+    if (toVersion.project.userId !== userId) {
+      throw new ForbiddenException('You do not have access to the target version');
+    }
+
+    // TODO: PHASE 4 - Real diff logic
+    // For now, return placeholder
     return {
       added: ['New bullet point about Azure'],
       removed: ['Old bullet point about AWS'],
@@ -105,13 +221,28 @@ export class VersionsService {
    * Download PDF version
    * From apis.md Section 8.1
    * 
-   * TODO: Implement file download
-   * TODO: Get version from database
-   * TODO: Return signed S3 URL or file stream
-   * TODO: Verify version is COMPILED
+   * PHASE 2: Placeholder with ownership verification (security stub)
+   * TODO: PHASE 4 - Implement file download
+   * TODO: PHASE 4 - Return signed S3 URL or file stream
+   * TODO: PHASE 4 - Verify version is COMPILED
    */
-  async downloadPdf(versionId: string): Promise<string> {
-    // Placeholder - return mock URL
+  async downloadPdf(versionId: string, userId: string): Promise<string> {
+    // PHASE 2 HARDENING: Verify ownership even in placeholder
+    const version = await this.prisma.resumeVersion.findUnique({
+      where: { id: versionId },
+      include: { project: true },
+    });
+
+    if (!version) {
+      throw new NotFoundException(`Version ${versionId} not found`);
+    }
+
+    if (version.project.userId !== userId) {
+      throw new ForbiddenException('You do not have access to this version');
+    }
+
+    // TODO: PHASE 4 - Real file download logic
+    // For now, return placeholder
     return 'https://placeholder-pdf-url.com/resume.pdf';
   }
 
@@ -119,12 +250,27 @@ export class VersionsService {
    * Download LaTeX source
    * From apis.md Section 8.2
    * 
-   * TODO: Implement file download
-   * TODO: Get version from database
-   * TODO: Return LaTeX content as file
+   * PHASE 2: Placeholder with ownership verification (security stub)
+   * TODO: PHASE 4 - Implement file download
+   * TODO: PHASE 4 - Return LaTeX content as file
    */
-  async downloadLatex(versionId: string): Promise<string> {
-    // Placeholder - return mock content
+  async downloadLatex(versionId: string, userId: string): Promise<string> {
+    // PHASE 2 HARDENING: Verify ownership even in placeholder
+    const version = await this.prisma.resumeVersion.findUnique({
+      where: { id: versionId },
+      include: { project: true },
+    });
+
+    if (!version) {
+      throw new NotFoundException(`Version ${versionId} not found`);
+    }
+
+    if (version.project.userId !== userId) {
+      throw new ForbiddenException('You do not have access to this version');
+    }
+
+    // TODO: PHASE 4 - Real file download logic
+    // For now, return placeholder
     return '\\documentclass{article}\n\\begin{document}\nPlaceholder\n\\end{document}';
   }
 }

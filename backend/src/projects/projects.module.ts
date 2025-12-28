@@ -7,6 +7,8 @@ import { ProjectsService } from './projects.service';
  * 
  * Handles resume project operations
  * From apis.md Section 3
+ * 
+ * PHASE 2 HARDENING: Base version created in transaction (no external dependency)
  */
 @Module({
   controllers: [ProjectsController],

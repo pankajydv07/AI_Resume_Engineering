@@ -5,16 +5,18 @@ import { VersionsModule } from './versions/versions.module';
 import { JdModule } from './jd/jd.module';
 import { AiJobsModule } from './ai-jobs/ai-jobs.module';
 import { AuthModule } from './auth/auth.module';
+import { PrismaModule } from './prisma/prisma.module';
+import { UsersModule } from './users/users.module';
 
 /**
  * App Module
  * 
  * Root module that ties all feature modules together
  * 
- * PHASE 1: SCAFFOLDING
- * - All modules scaffolded
- * - No Prisma module yet (no database connection)
- * - No background job processing
+ * PHASE 2: PERSISTENCE LAYER
+ * - PrismaModule active (database connection)
+ * - UsersModule active (user persistence)
+ * - ConfigModule loads DATABASE_URL from .env
  * 
  * Modules follow structure from apis.md:
  * - Projects (Section 3)
@@ -22,6 +24,8 @@ import { AuthModule } from './auth/auth.module';
  * - JD (Section 5)
  * - AI Jobs (Section 6)
  * - Auth (Section 2)
+ * - Prisma (database layer)
+ * - Users (internal user persistence)
  */
 @Module({
   imports: [
@@ -31,6 +35,12 @@ import { AuthModule } from './auth/auth.module';
       envFilePath: '.env',
     }),
     
+    // Database layer
+    PrismaModule, // Global module providing PrismaService
+    
+    // Core modules
+    UsersModule, // User persistence (internal, no API endpoints)
+    
     // Feature modules
     AuthModule,
     ProjectsModule,
@@ -38,8 +48,7 @@ import { AuthModule } from './auth/auth.module';
     JdModule,
     AiJobsModule,
     
-    // TODO: Add PrismaModule when implementing database
-    // TODO: Add background job processing module (Bull/BullMQ)
+    // TODO (PHASE 4+): Add background job processing module (Bull/BullMQ)
   ],
 })
 export class AppModule {}
