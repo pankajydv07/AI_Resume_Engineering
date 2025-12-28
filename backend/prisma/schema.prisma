@@ -1,0 +1,194 @@
+// This is your Prisma schema file
+// Schema matches database.md exactly (SINGLE SOURCE OF TRUTH)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS (from database.md Section 3)
+// ============================================
+
+enum ResumeVersionType {
+  BASE
+  MANUAL
+  AI_GENERATED
+}
+
+enum ResumeVersionStatus {
+  DRAFT
+  COMPILED
+  ERROR
+  ACTIVE
+}
+
+enum ResumeSectionType {
+  EDUCATION
+  EXPERIENCE
+  PROJECTS
+  SKILLS
+  ACHIEVEMENTS
+  OTHER
+}
+
+enum AIJobStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum AIMode {
+  MINIMAL
+  BALANCED
+  AGGRESSIVE
+}
+
+// ============================================
+// MODELS (from database.md Section 4)
+// ============================================
+
+/// User (database.md Section 4.1)
+/// Represents an authenticated user
+/// Authentication is handled externally (Clerk)
+model User {
+  id        String   @id @default(uuid())
+  clerkId   String   @unique
+  email     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  projects ResumeProject[]
+}
+
+/// ResumeProject (database.md Section 4.2)
+/// Top-level container for resumes
+/// One project = one resume strategy (e.g., "Backend Resume")
+model ResumeProject {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user            User             @relation(fields: [userId], references: [id])
+  versions        ResumeVersion[]
+  jobDescriptions JobDescription[]
+  aiJobs          AIJob[]
+}
+
+/// ResumeVersion (database.md Section 4.3)
+/// Represents a single version of a resume
+/// Rules:
+/// - Versions are NEVER overwritten
+/// - AI always creates a new version
+/// - parentVersionId enables version trees
+model ResumeVersion {
+  id              String              @id @default(uuid())
+  projectId       String
+  parentVersionId String?
+  type            ResumeVersionType
+  status          ResumeVersionStatus
+  latexContent    String              @db.Text
+  pdfUrl          String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  // Relations
+  project       ResumeProject   @relation(fields: [projectId], references: [id])
+  parentVersion ResumeVersion?  @relation("VersionTree", fields: [parentVersionId], references: [id])
+  childVersions ResumeVersion[] @relation("VersionTree")
+  sections      ResumeSection[]
+  aiJobs        AIJob[]
+  diffsFrom     VersionDiff[]   @relation("DiffFrom")
+  diffsTo       VersionDiff[]   @relation("DiffTo")
+}
+
+/// ResumeSection (database.md Section 4.4)
+/// Logical sections extracted from a resume version
+/// Purpose:
+/// - Section-wise AI control
+/// - Locking for safety
+/// - Cleaner diffs
+model ResumeSection {
+  id          String            @id @default(uuid())
+  versionId   String
+  sectionType ResumeSectionType
+  content     String            @db.Text
+  isLocked    Boolean
+  orderIndex  Int
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  // Relations
+  version ResumeVersion @relation(fields: [versionId], references: [id])
+}
+
+/// JobDescription (database.md Section 4.5)
+/// Stores job descriptions and extracted intelligence
+/// Notes:
+/// - AI analysis output is stored, not recomputed
+/// - JSON is flexible by design
+model JobDescription {
+  id              String   @id @default(uuid())
+  projectId       String
+  rawText         String   @db.Text
+  extractedSkills Json
+  keywords        Json
+  roleType        String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  project ResumeProject @relation(fields: [projectId], references: [id])
+  aiJobs  AIJob[]
+}
+
+/// AIJob (database.md Section 4.6)
+/// Tracks asynchronous AI operations
+/// Rules:
+/// - Frontend polls job status
+/// - No synchronous AI calls
+model AIJob {
+  id            String      @id @default(uuid())
+  projectId     String
+  baseVersionId String
+  jdId          String
+  mode          AIMode
+  status        AIJobStatus
+  errorMessage  String?     @db.Text
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  // Relations
+  project     ResumeProject   @relation(fields: [projectId], references: [id])
+  baseVersion ResumeVersion   @relation(fields: [baseVersionId], references: [id])
+  jd          JobDescription  @relation(fields: [jdId], references: [id])
+}
+
+/// VersionDiff (database.md Section 4.7)
+/// Explains differences between resume versions
+/// Purpose:
+/// - Transparency
+/// - Trust
+/// - Diff UI
+model VersionDiff {
+  id            String   @id @default(uuid())
+  fromVersionId String
+  toVersionId   String
+  added         Json
+  removed       Json
+  rewritten     Json
+  createdAt     DateTime @default(now())
+
+  // Relations
+  fromVersion ResumeVersion @relation("DiffFrom", fields: [fromVersionId], references: [id])
+  toVersion   ResumeVersion @relation("DiffTo", fields: [toVersionId], references: [id])
+}
