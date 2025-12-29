@@ -120,7 +120,10 @@ export function EditorWorkspace({ projectId }: EditorWorkspaceProps) {
         {/* RIGHT: JD Panel (conditional) */}
         {isJdPanelOpen && (
           <div className="w-1/3">
-            <JdPanel projectId={projectId} />
+            <JdPanel 
+              projectId={projectId} 
+              baseVersionId={currentVersionId}
+            />
           </div>
         )}
       </div>

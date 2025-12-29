@@ -3,9 +3,11 @@
 import { useState } from 'react';
 import { JdInput } from './JdInput';
 import { JdList } from './JdList';
+import { AiJobButton } from '../ai/AiJobButton';
 
 /**
  * PHASE 4: JD Management Panel
+ * PHASE 5: AI Job Trigger (added)
  * 
  * Manages JD state completely separate from resume editor state
  * 
@@ -23,9 +25,10 @@ import { JdList } from './JdList';
 
 interface JdPanelProps {
   projectId: string;
+  baseVersionId: string | null; // PHASE 5: Pass from parent
 }
 
-export function JdPanel({ projectId }: JdPanelProps) {
+export function JdPanel({ projectId, baseVersionId }: JdPanelProps) {
   const [selectedJdId, setSelectedJdId] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -62,6 +65,13 @@ export function JdPanel({ projectId }: JdPanelProps) {
         selectedJdId={selectedJdId}
         onJdSelected={handleJdSelected}
         refreshTrigger={refreshTrigger}
+      />
+
+      {/* PHASE 5: AI Job Button */}
+      <AiJobButton
+        projectId={projectId}
+        baseVersionId={baseVersionId}
+        selectedJdId={selectedJdId}
       />
     </div>
   );
