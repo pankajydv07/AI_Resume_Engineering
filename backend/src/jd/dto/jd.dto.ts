@@ -19,3 +19,16 @@ export class SubmitJdDto {
 export class SubmitJdResponseDto {
   jdId: string;
 }
+
+/**
+ * Response DTO for getting a job description
+ * From apis.md Section 5.2
+ * 
+ * PHASE 4: Returns rawText only (no AI fields)
+ */
+export class JobDescriptionDto {
+  jdId: string;
+  projectId: string;
+  rawText: string;
+  createdAt: string;
+}

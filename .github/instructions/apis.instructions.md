@@ -154,6 +154,34 @@ JD analysis happens internally
 
 Frontend does not process JD data
 
+## 5.2 Get Job Description
+
+GET /jd/{jdId}
+
+Response:
+{
+  "jdId": "uuid",
+  "projectId": "uuid",
+  "rawText": "string",
+  "createdAt": "timestamp"
+}
+
+
+## 5.3 List Job Descriptions for Project
+
+GET /jd/project/{projectId}
+
+Response:
+[
+  {
+    "jdId": "uuid",
+    "projectId": "uuid",
+    "rawText": "string",
+    "createdAt": "timestamp"
+  }
+]
+
+
 6. AI TAILORING APIS
 6.1 Start AI Tailoring Job
 POST /ai/tailor

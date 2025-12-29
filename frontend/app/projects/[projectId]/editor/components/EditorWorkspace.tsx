@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useEditorState } from '../hooks/useEditorState';
 import { EditorToolbar } from './EditorToolbar';
 import { VersionSelector } from './VersionSelector';
 import { LaTeXEditor } from './LaTeXEditor';
 import { PDFPreview } from './PDFPreview';
+import { JdPanel } from './jd/JdPanel';
 
 /**
  * PHASE 3: Main Editor Workspace Component
@@ -39,6 +40,9 @@ export function EditorWorkspace({ projectId }: EditorWorkspaceProps) {
     saveEdit,
   } = useEditorState(projectId);
 
+  // PHASE 4: JD Panel visibility state (completely separate from editor state)
+  const [isJdPanelOpen, setIsJdPanelOpen] = React.useState(false);
+
   const handleSave = async () => {
     await saveEdit((newVersionId) => {
       console.log('Save successful, new version:', newVersionId);
@@ -65,6 +69,16 @@ export function EditorWorkspace({ projectId }: EditorWorkspaceProps) {
         onSave={handleSave}
         currentVersionId={currentVersionId}
       />
+      
+      {/* JD Panel Toggle Button */}
+      <div className="border-b border-gray-200 px-4 py-2 bg-gray-50">
+        <button
+          onClick={() => setIsJdPanelOpen(!isJdPanelOpen)}
+          className="text-sm font-medium text-blue-600 hover:text-blue-700"
+        >
+          {isJdPanelOpen ? '← Hide Job Descriptions' : '→ Show Job Descriptions'}
+        </button>
+      </div>
 
       {/* Version Selector */}
       <VersionSelector
@@ -83,10 +97,10 @@ export function EditorWorkspace({ projectId }: EditorWorkspaceProps) {
         </div>
       )}
 
-      {/* Main Editor Layout: LEFT | RIGHT */}
+      {/* Main Editor Layout: LEFT | CENTER | RIGHT (conditional) */}
       <div className="flex-1 flex overflow-hidden">
         {/* LEFT: LaTeX Editor */}
-        <div className="w-1/2 border-r border-gray-200">
+        <div className={isJdPanelOpen ? 'w-1/3 border-r border-gray-200' : 'w-1/2 border-r border-gray-200'}>
           <LaTeXEditor
             value={latexDraft}
             onChange={updateDraft}
@@ -95,13 +109,20 @@ export function EditorWorkspace({ projectId }: EditorWorkspaceProps) {
           />
         </div>
 
-        {/* RIGHT: PDF Preview */}
-        <div className="w-1/2">
+        {/* CENTER: PDF Preview */}
+        <div className={isJdPanelOpen ? 'w-1/3 border-r border-gray-200' : 'w-1/2'}>
           <PDFPreview
             pdfUrl={currentVersion?.pdfUrl || null}
             versionId={currentVersionId}
           />
         </div>
+
+        {/* RIGHT: JD Panel (conditional) */}
+        {isJdPanelOpen && (
+          <div className="w-1/3">
+            <JdPanel projectId={projectId} />
+          </div>
+        )}
       </div>
 
       {/* Loading Overlay */}
