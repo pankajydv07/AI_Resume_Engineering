@@ -26,16 +26,19 @@ export function LaTeXEditor({ value, onChange, isDirty, isLoading }: LaTeXEditor
 
   return (
     <div className="flex flex-col h-full">
-      {/* Editor Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h2 className="text-sm font-semibold text-gray-700">LaTeX Editor</h2>
+      {/* PHASE 7.2: Section Header with Helper Text */}
+      <div className="bg-white border-b border-gray-200 px-4 py-3">
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-sm font-semibold text-gray-900">Resume Editor</h2>
           {isDirty && (
             <span className="text-xs text-orange-600 font-medium">
               • Unsaved Changes
             </span>
           )}
         </div>
+        <p className="text-xs text-gray-500">
+          Edit your resume LaTeX code. Changes are saved manually as new versions.
+        </p>
       </div>
 
       {/* Editor Content */}

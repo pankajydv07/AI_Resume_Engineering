@@ -6,6 +6,7 @@ import { ProposalModal } from './ProposalModal';
 /**
  * PHASE 5: AI Job Button Component
  * PHASE 6: Enhanced with proposal viewing
+ * PHASE 7.2: Button gating with helper text
  * 
  * Triggers AI tailoring job and displays status
  * Shows proposal modal when job completes
@@ -17,6 +18,11 @@ import { ProposalModal } from './ProposalModal';
  * PHASE 6: Proposal viewing
  * - Shows ProposalModal when status = COMPLETED
  * - Handles accept/reject actions
+ * 
+ * PHASE 7.2: UI Gating Rules
+ * - "Start AI Tailoring" disabled if no baseVersionId OR no selectedJdId
+ * - Helper text explains prerequisites
+ * - "Review Proposal" only visible when status = COMPLETED
  */
 
 interface AiJobButtonProps {
@@ -100,8 +106,9 @@ export function AiJobButton({
         setStatus(result.status);
         setErrorMessage(result.errorMessage);
 
-        // If completed, show proposal modal
-        if (result.status === 'COMPLETED') {
+        // PHASE 7.2: Only show proposal modal automatically on first completion
+        // User can click "Review Proposal" button to re-open if closed
+        if (result.status === 'COMPLETED' && !showProposal) {
           setShowProposal(true);
           return;
         }
@@ -134,27 +141,40 @@ export function AiJobButton({
     resetJob();
   };
 
+  // PHASE 7.2: Determine why button is disabled for helper text
+  const getDisabledReason = (): string | null => {
+    if (!baseVersionId && !selectedJdId) {
+      return 'Load a resume version and select a job description to start AI tailoring';
+    }
+    if (!baseVersionId) {
+      return 'Load a resume version using the version selector above';
+    }
+    if (!selectedJdId) {
+      return 'Select a job description from the list';
+    }
+    return null;
+  };
+
+  const disabledReason = getDisabledReason();
+
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-4">
-      <h3 className="text-sm font-semibold text-gray-700 mb-3">
-        AI Tailoring
-      </h3>
-
-      {/* Prerequisites Check */}
-      {!baseVersionId && (
-        <div className="text-sm text-amber-600 mb-3">
-          ⚠ No resume version loaded
-        </div>
-      )}
-      {!selectedJdId && (
-        <div className="text-sm text-amber-600 mb-3">
-          ⚠ No job description selected
+      {/* PHASE 7.2: Prerequisites Helper Text */}
+      {disabledReason && !jobId && (
+        <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded text-sm text-amber-800">
+          <div className="flex items-start gap-2">
+            <span className="text-amber-600 font-bold">ⓘ</span>
+            <div>
+              <div className="font-medium mb-1">Prerequisites Required</div>
+              <div className="text-xs">{disabledReason}</div>
+            </div>
+          </div>
         </div>
       )}
 
       {/* Error Display */}
       {errorMessage && (
-        <div className="text-sm text-red-600 mb-3">
+        <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-800">
           <strong>Error:</strong> {errorMessage}
         </div>
       )}
@@ -182,36 +202,56 @@ export function AiJobButton({
         </div>
       )}
 
-      {/* Action Button */}
+      {/* Action Buttons */}
       {!jobId ? (
+        /* PHASE 7.2: Start AI Tailoring button with gating */
         <button
           type="button"
           onClick={startAiJob}
           disabled={!canStart || isStarting}
+          title={disabledReason || undefined}
           className="w-full px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
         >
           {isStarting ? 'Starting...' : 'Start AI Tailoring'}
         </button>
-      ) : (
+      ) : status === 'COMPLETED' ? (
+        /* PHASE 7.2: Review Proposal - only visible when COMPLETED */
+        <button
+          type="button"
+          onClick={() => setShowProposal(true)}
+          className="w-full px-4 py-2 text-sm font-medium text-white bg-green-600 rounded hover:bg-green-700 transition-colors"
+        >
+          Review Proposal
+        </button>
+      ) : status === 'FAILED' ? (
+        /* Failed - allow starting new job */
         <button
           type="button"
           onClick={resetJob}
-          disabled={status === 'QUEUED' || status === 'RUNNING'}
-          className="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded hover:bg-gray-200 disabled:bg-gray-50 disabled:cursor-not-allowed transition-colors"
+          className="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
         >
-          {status === 'QUEUED' || status === 'RUNNING' ? 'In Progress...' : 'Start New Job'}
+          Start New Job
+        </button>
+      ) : (
+        /* In progress - show disabled button */
+        <button
+          type="button"
+          disabled
+          className="w-full px-4 py-2 text-sm font-medium text-gray-500 bg-gray-100 rounded cursor-not-allowed"
+        >
+          {status === 'QUEUED' ? 'Queued...' : 'Processing...'}
         </button>
       )}
 
       {/* Phase Notice */}
       <div className="mt-3 pt-3 border-t border-gray-200">
         <div className="text-xs text-gray-500">
-          PHASE 6: AI proposal workflow. Explicit acceptance required.
+          PHASE 7.2: Button gating with helper text. Review proposal only shown when complete.
         </div>
       </div>
 
-      {/* Proposal Modal */}
-      {showProposal && jobId && baseVersionId && (
+      {/* PHASE 7.2: Proposal Modal - only when explicitly opened */}
+      {showProposal && jobId && baseVersionId && status === 'COMPLETED' && (
         <ProposalModal
           aiJobId={jobId}
           projectId={projectId}

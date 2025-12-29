@@ -55,30 +55,48 @@ export function JdPanel({ projectId, baseVersionId, baseLatexContent, onVersionC
   };
 
   return (
-    <div className="space-y-4">
-      {/* JD Input */}
-      <JdInput 
-        projectId={projectId} 
-        onJdSubmitted={handleJdSubmitted}
-      />
+    <div className="flex flex-col h-full">
+      {/* PHASE 7.2: Section Header with Helper Text */}
+      <div className="bg-white border-b border-gray-200 px-4 py-3">
+        <h2 className="text-sm font-semibold text-gray-900 mb-1">Job Descriptions</h2>
+        <p className="text-xs text-gray-500">
+          Add job descriptions to tailor your resume for specific positions.
+        </p>
+      </div>
 
-      {/* JD List */}
-      <JdList
-        projectId={projectId}
-        selectedJdId={selectedJdId}
-        onJdSelected={handleJdSelected}
-        refreshTrigger={refreshTrigger}
-      />
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* JD Input */}
+        <JdInput 
+          projectId={projectId} 
+          onJdSubmitted={handleJdSubmitted}
+        />
 
-      {/* PHASE 5: AI Job Button */}
-      {/* PHASE 6: Enhanced with proposal workflow */}
-      <AiJobButton
-        projectId={projectId}
-        baseVersionId={baseVersionId}
-        selectedJdId={selectedJdId}
-        baseLatexContent={baseLatexContent}
-        onVersionChange={onVersionChange}
-      />
+        {/* JD List */}
+        <JdList
+          projectId={projectId}
+          selectedJdId={selectedJdId}
+          onJdSelected={handleJdSelected}
+          refreshTrigger={refreshTrigger}
+        />
+
+        {/* PHASE 7.2: AI Tailoring Section Header */}
+        <div className="pt-4 border-t border-gray-200">
+          <h3 className="text-sm font-semibold text-gray-900 mb-1">AI Tailoring</h3>
+          <p className="text-xs text-gray-500 mb-3">
+            Generate AI-optimized resume versions based on selected job descriptions.
+          </p>
+          
+          {/* PHASE 5: AI Job Button */}
+          {/* PHASE 6: Enhanced with proposal workflow */}
+          <AiJobButton
+            projectId={projectId}
+            baseVersionId={baseVersionId}
+            selectedJdId={selectedJdId}
+            baseLatexContent={baseLatexContent}
+            onVersionChange={onVersionChange}
+          />
+        </div>
+      </div>
     </div>
   );
 }

@@ -174,13 +174,16 @@ export default function ProjectPage() {
               </Link>
 
               {/* Job Descriptions Link */}
-              <div className="bg-white rounded-lg shadow p-6 opacity-50 cursor-not-allowed">
+              <Link
+                href={`/projects/${projectId}/jd`}
+                className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition group"
+              >
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-gray-900">
+                  <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition">
                     Job Descriptions
                   </h3>
                   <svg
-                    className="h-6 w-6 text-gray-400"
+                    className="h-6 w-6 text-gray-400 group-hover:text-blue-600 transition"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -194,18 +197,21 @@ export default function ProjectPage() {
                   </svg>
                 </div>
                 <p className="text-sm text-gray-600">
-                  Manage job descriptions (Available in editor)
+                  View all saved job descriptions for this project
                 </p>
-              </div>
+              </Link>
 
               {/* AI Jobs Link */}
-              <div className="bg-white rounded-lg shadow p-6 opacity-50 cursor-not-allowed">
+              <Link
+                href={`/projects/${projectId}/ai-jobs`}
+                className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition group"
+              >
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-gray-900">
+                  <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition">
                     AI Jobs
                   </h3>
                   <svg
-                    className="h-6 w-6 text-gray-400"
+                    className="h-6 w-6 text-gray-400 group-hover:text-blue-600 transition"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -219,9 +225,9 @@ export default function ProjectPage() {
                   </svg>
                 </div>
                 <p className="text-sm text-gray-600">
-                  View AI tailoring jobs and status (Coming soon)
+                  Track AI tailoring jobs and status
                 </p>
-              </div>
+              </Link>
             </div>
           </div>
         )}

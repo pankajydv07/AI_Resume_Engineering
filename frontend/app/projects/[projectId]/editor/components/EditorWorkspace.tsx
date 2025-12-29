@@ -100,14 +100,39 @@ export function EditorWorkspace({ projectId }: EditorWorkspaceProps) {
 
       {/* Main Editor Layout: LEFT | CENTER | RIGHT (conditional) */}
       <div className="flex-1 flex overflow-hidden">
-        {/* LEFT: LaTeX Editor */}
+        {/* LEFT: LaTeX Editor or Empty State */}
         <div className={isJdPanelOpen ? 'w-1/3 border-r border-gray-200' : 'w-1/2 border-r border-gray-200'}>
-          <LaTeXEditor
-            value={latexDraft}
-            onChange={updateDraft}
-            isDirty={isDirty}
-            isLoading={isLoading}
-          />
+          {!currentVersionId && !isLoading ? (
+            /* Empty State - No Version Loaded */
+            <div className="flex h-full items-center justify-center bg-gray-50">
+              <div className="text-center max-w-md px-6">
+                <svg
+                  className="mx-auto h-12 w-12 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                <h3 className="mt-4 text-base font-medium text-gray-900">No Version Loaded</h3>
+                <p className="mt-2 text-sm text-gray-500">
+                  Load a version using the selector above to begin editing.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <LaTeXEditor
+              value={latexDraft}
+              onChange={updateDraft}
+              isDirty={isDirty}
+              isLoading={isLoading}
+            />
+          )}
         </div>
 
         {/* CENTER: PDF Preview */}
