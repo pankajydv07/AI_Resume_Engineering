@@ -68,6 +68,7 @@ export function EditorWorkspace({ projectId }: EditorWorkspaceProps) {
         isLoading={isLoading}
         onSave={handleSave}
         currentVersionId={currentVersionId}
+        projectId={projectId}
       />
       
       {/* JD Panel Toggle Button */}

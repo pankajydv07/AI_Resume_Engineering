@@ -1,9 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 
 /**
  * PHASE 3: Editor Toolbar Component
+ * 
+ * PHASE 7.1: Added navigation back to project
  * 
  * Per requirements:
  * - Save button calls PUT /api/versions/{versionId}
@@ -21,6 +24,7 @@ interface EditorToolbarProps {
   isLoading: boolean;
   onSave: () => Promise<void>;
   currentVersionId: string | null;
+  projectId: string;
   onSaveSuccess?: () => void;
 }
 
@@ -29,6 +33,7 @@ export function EditorToolbar({
   isLoading,
   onSave,
   currentVersionId,
+  projectId,
   onSaveSuccess,
 }: EditorToolbarProps) {
   const [showSuccess, setShowSuccess] = useState(false);
@@ -59,6 +64,14 @@ export function EditorToolbar({
   return (
     <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
       <div className="flex items-center gap-4">
+        {/* Back to Project Link */}
+        <Link
+          href={`/projects/${projectId}`}
+          className="text-gray-600 hover:text-gray-900 transition"
+        >
+          ← Back
+        </Link>
+        
         <h1 className="text-lg font-semibold text-gray-900">Resume Editor</h1>
         
         {currentVersionId && (
