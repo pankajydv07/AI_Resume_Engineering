@@ -5,16 +5,19 @@ import { useState } from 'react';
 /**
  * PHASE 6: Proposal Accept/Reject Component
  * 
- * Allows user to explicitly accept or reject AI-generated proposal
+ * WHY EXPLICIT ACCEPT/REJECT:
+ * These are the only two paths for a ProposedVersion. There is no "save draft" or "auto-apply".
+ * Accept → creates new ResumeVersion (type: AI_GENERATED) and adds it to version history.
+ * Reject → proposal is discarded, no version created, no state change.
  * 
- * Accept behavior:
- * - Creates new AI_GENERATED ResumeVersion
- * - Sets parentVersionId to baseVersionId
- * - Switches editor to new version
+ * WHY BACKEND CREATES VERSION:
+ * Version creation happens server-side to enforce immutability guarantees. Frontend never
+ * directly writes to the version graph. This prevents race conditions and ensures audit integrity.
  * 
- * Reject behavior:
- * - Discards proposal
- * - Resume remains unchanged
+ * WHY NO UNDO AFTER ACCEPT:
+ * Once accepted, the AI-generated version is indistinguishable from any other version.
+ * Users can switch back to previous versions via the version selector, but there's no
+ * "undo AI accept" button. This simplifies the mental model: versions are immutable.
  * 
  * Forbidden:
  * - No partial acceptance
@@ -45,7 +48,7 @@ export function ProposalActions({
     setError(null);
 
     try {
-      // TODO: Replace with real Clerk token when auth is implemented
+      // FUTURE PHASE 8: Add Clerk JWT authentication
       const response = await fetch('http://localhost:3001/api/ai/proposal/accept', {
         method: 'POST',
         headers: {
@@ -78,7 +81,7 @@ export function ProposalActions({
     setError(null);
 
     try {
-      // TODO: Replace with real Clerk token when auth is implemented
+      // FUTURE PHASE 8: Add Clerk JWT authentication
       const response = await fetch('http://localhost:3001/api/ai/proposal/reject', {
         method: 'POST',
         headers: {

@@ -36,7 +36,7 @@ export function JdInput({ projectId, onJdSubmitted }: JdInputProps) {
     setError(null);
 
     try {
-      // TODO: Replace with real Clerk token when auth is implemented
+      // FUTURE PHASE 8: Add Clerk JWT authentication
       const response = await fetch('http://localhost:3001/api/jd', {
         method: 'POST',
         headers: {

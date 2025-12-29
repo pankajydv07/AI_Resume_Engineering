@@ -44,8 +44,11 @@ export function DiffViewer({
     const baseDiff: DiffLine[] = [];
     const proposedDiff: DiffLine[] = [];
 
-    // Simple comparison (exact match)
-    // TODO: Replace with actual diff algorithm for better UX
+    // Simple line-by-line comparison (exact match)
+    // WHY SIMPLE DIFF:
+    // Complex diff algorithms (Myers, Hunt-McIlroy) are overkill for LaTeX resumes (~100-300 lines).
+    // Line-by-line comparison is fast, predictable, and sufficient for user review.
+    // FUTURE ENHANCEMENT: Could add word-level diff highlighting for changed lines.
     const maxLength = Math.max(base.length, proposed.length);
 
     for (let i = 0; i < maxLength; i++) {

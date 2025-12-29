@@ -10,21 +10,18 @@ import { handleHttpError, getErrorMessage } from '@/lib/errorHandling';
  * PHASE 7.2: Button gating with helper text
  * PHASE 7.3: Robustness - refresh behavior & lifecycle hardening
  * 
- * Triggers AI tailoring job and displays status
- * Shows proposal modal when job completes
+ * WHY THIS COMPONENT EXISTS:
+ * AI is powerful but not trustworthy by default. This component enforces the trust boundary:
+ * AI output never directly modifies user data. Instead, AI creates a PROPOSAL (ProposedVersion)
+ * which remains quarantined until the user explicitly reviews and accepts it.
  * 
- * Per apis.md Section 6:
- * - POST /api/ai/tailor to start job
- * - GET /api/ai/jobs/{jobId} to poll status
+ * WHY POLLING:
+ * AI processing takes time (seconds to minutes). Polling keeps the UI responsive and allows
+ * users to navigate away and return. The job persists on the backend; polling just syncs UI state.
  * 
- * PHASE 6: Proposal viewing
- * - Shows ProposalModal when status = COMPLETED
- * - Handles accept/reject actions
- * 
- * PHASE 7.2: UI Gating Rules
- * - "Start AI Tailoring" disabled if no baseVersionId OR no selectedJdId
- * - Helper text explains prerequisites
- * - "Review Proposal" only visible when status = COMPLETED
+ * WHY NO AUTO-ACCEPTANCE:
+ * Users must see the diff and click "Accept". No silent updates. This is the core safety guarantee.
+ * Even if the AI job completes, the proposal stays in limbo until explicit user consent.
  * 
  * PHASE 7.3: Refresh Behavior
  * - Component state (jobId, status, polling) resets on refresh
@@ -77,7 +74,7 @@ export function AiJobButton({
     setErrorMessage(null);
 
     try {
-      // TODO: Replace with real Clerk token when auth is implemented
+      // FUTURE PHASE 8: Add Clerk JWT authentication
       const response = await fetch('http://localhost:3001/api/ai/tailor', {
         method: 'POST',
         headers: {

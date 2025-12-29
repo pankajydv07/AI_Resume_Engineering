@@ -42,7 +42,7 @@ export function JdList({ projectId, selectedJdId, onJdSelected, refreshTrigger }
     setError(null);
 
     try {
-      // TODO: Replace with real Clerk token when auth is implemented
+      // FUTURE PHASE 8: Add Clerk JWT authentication
       const response = await fetch(`http://localhost:3001/api/jd/project/${projectId}`, {
         headers: {
           'Content-Type': 'application/json',

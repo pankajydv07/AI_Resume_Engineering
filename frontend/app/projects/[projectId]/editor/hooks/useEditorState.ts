@@ -1,18 +1,24 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';import { handleHttpError, getErrorMessage } from '@/lib/errorHandling';
+import { useState, useCallback, useEffect } from 'react';
+import { handleHttpError, getErrorMessage } from '@/lib/errorHandling';
+
 /**
  * PHASE 3: Editor State Management Hook
  * 
- * Per requirements:
- * - Load ResumeVersion via GET /api/versions/{versionId}
- * - Store in-memory state: currentVersionId, latexDraft, isDirty
- * - Editing updates latexDraft only
- * - Switching versions resets editor state
+ * WHY THIS EXISTS:
+ * Version immutability is the foundation of safe AI collaboration. Users need confidence
+ * that they can experiment with AI proposals without fear of losing their work. This hook
+ * enforces the contract: versions are read-only after creation, edits spawn new versions.
  * 
- * Per apis.md Section 4.1:
- * - GET /api/versions/{versionId} returns:
- *   { versionId, projectId, type, status, latexContent, pdfUrl, createdAt }
+ * WHY IN-MEMORY DRAFT:
+ * The `latexDraft` state lives in-memory (not backend) because users should be able to
+ * type freely without network overhead. The `isDirty` flag signals when unsaved work exists,
+ * preventing accidental navigation away from edits.
+ * 
+ * WHY NO MUTATIONS:
+ * Backend versions are immutable. We never PATCH existing versions. Every save creates
+ * a new version with type=MANUAL. This preserves audit history and enables safe rollback.
  */
 
 interface ResumeVersion {
@@ -56,7 +62,7 @@ export function useEditorState(projectId: string) {
       const response = await fetch(`http://localhost:3001/api/versions/${versionId}`, {
         headers: {
           'Content-Type': 'application/json',
-          // TODO: Add Authorization header with Clerk JWT
+          // FUTURE PHASE 8: Add Authorization header with Clerk JWT
         },
       });
 
@@ -131,7 +137,7 @@ export function useEditorState(projectId: string) {
       const response = await fetch(`http://localhost:3001/api/versions/project/${projectId}`, {
         headers: {
           'Content-Type': 'application/json',
-          // TODO: Add Authorization header with Clerk JWT
+          // FUTURE PHASE 8: Add Authorization header with Clerk JWT
         },
       });
 
@@ -185,7 +191,9 @@ export function useEditorState(projectId: string) {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      // TODO: Replace with real Clerk token when auth is implemented
+      // FUTURE PHASE 8: Replace with real Clerk JWT token
+      // Currently: Backend accepts any bearer token for development
+      // Production: Must validate Clerk JWT signature and claims
       const response = await fetch(`http://localhost:3001/api/versions/${state.currentVersionId}`, {
         method: 'PUT',
         headers: {

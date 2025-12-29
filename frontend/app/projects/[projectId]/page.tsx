@@ -47,7 +47,8 @@ export default function ProjectPage() {
     setError(null);
 
     try {
-      // TODO: Add Clerk authentication token when implemented
+      // FUTURE PHASE 8: Add Clerk authentication token
+      // Currently using mock auth for development - backend validates format but not signature
       const response = await fetch('http://localhost:3001/api/projects', {
         headers: {
           'Content-Type': 'application/json',

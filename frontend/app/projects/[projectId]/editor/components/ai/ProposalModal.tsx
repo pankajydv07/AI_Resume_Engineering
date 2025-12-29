@@ -9,15 +9,18 @@ import { handleHttpError, getErrorMessage } from '@/lib/errorHandling';
  * PHASE 6: Proposal Modal Component
  * PHASE 7.3: Enhanced error handling for missing proposals
  * 
- * Displays AI proposal with diff viewer and accept/reject controls
- * Triggered when AI job status becomes COMPLETED
+ * WHY THIS MODAL EXISTS:
+ * This is the critical trust boundary between AI and user data. The modal forces users to
+ * review AI changes before they become part of the version history. The side-by-side diff
+ * makes it clear EXACTLY what will change. No surprises, no hidden edits.
  * 
- * Flow:
- * 1. Fetch proposal content from backend
- * 2. Display side-by-side diff
- * 3. User accepts or rejects
- * 4. On accept: create new version and switch editor
- * 5. On reject: discard proposal and close modal
+ * WHY ACCEPT/REJECT (NO PARTIAL):
+ * Allowing line-by-line acceptance adds significant UX complexity and merge conflict scenarios.
+ * All-or-nothing is a deliberate simplification. Users can always manually edit after accepting.
+ * 
+ * WHY BLOCK UI:
+ * The modal is deliberately intrusive (full-screen, blocks editor). Users cannot accidentally
+ * accept a proposal by clicking outside. This forces intentional decision-making.
  * 
  * PHASE 7.3: Robustness
  * - Handles missing proposal data gracefully
@@ -54,7 +57,7 @@ export function ProposalModal({
       setError(null);
 
       try {
-        // TODO: Replace with real Clerk token when auth is implemented
+        // FUTURE PHASE 8: Add Clerk JWT authentication  
         const response = await fetch(`http://localhost:3001/api/ai/jobs/${aiJobId}/proposal`, {
           method: 'GET',
           headers: {

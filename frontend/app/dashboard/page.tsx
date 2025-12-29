@@ -57,11 +57,12 @@ export default function DashboardPage() {
     setError(null);
 
     try {
-      // TODO: Add Clerk authentication token when implemented
+      // FUTURE PHASE 8: Add Clerk authentication token
+      // Currently using mock auth for development - backend validates format but not signature
       const response = await fetch('http://localhost:3001/api/projects', {
         headers: {
           'Content-Type': 'application/json',
-          // TODO: Add Authorization header with Clerk JWT
+          // FUTURE PHASE 8: Add Authorization header with Clerk JWT
         },
       });
 
@@ -96,12 +97,13 @@ export default function DashboardPage() {
     setCreateError(null);
 
     try {
-      // TODO: Add Clerk authentication token when implemented
+      // FUTURE PHASE 8: Add Clerk authentication token  
+      // Currently using mock auth for development - backend validates format but not signature
       const response = await fetch('http://localhost:3001/api/projects', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // TODO: Add Authorization header with Clerk JWT
+          // FUTURE PHASE 8: Add Authorization header with Clerk JWT
         },
         body: JSON.stringify({
           name: projectName.trim(),

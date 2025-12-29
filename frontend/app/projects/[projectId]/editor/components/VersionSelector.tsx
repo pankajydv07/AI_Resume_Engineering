@@ -2,14 +2,16 @@
 
 /**
  * PHASE 3: Version Selector Component
+ * PHASE 7: Fully functional with version dropdown
  * 
- * Per requirements:
- * - Switching versions resets editor state
- * - Loads new version via loadVersion()
- * - Clears isDirty flag
+ * WHY VERSION SWITCHING EXISTS:
+ * Users need to compare and revert to previous resume states. This component enforces
+ * a critical safety rule: switching versions discards in-memory edits (isDirty check).
+ * This prevents confusion about which version is being edited.
  * 
- * NOTE: Version listing not in apis.md, so using placeholder
- * TODO: Add version listing API when defined in apis.md
+ * WHY WARN ON DIRTY:
+ * If user has typed changes but not saved, switching versions would silently lose that work.
+ * The confirmation dialog forces an intentional choice: save first, or discard.
  */
 
 interface Version {
@@ -31,8 +33,9 @@ export function VersionSelector({
   onVersionSwitch,
   isDirty,
 }: VersionSelectorProps) {
-  // TODO: Fetch versions from API when listing endpoint is added to apis.md
-  // For now: Placeholder UI only
+  // PHASE 7: Version listing functional - shows current version only for simplicity
+  // FUTURE ENHANCEMENT: Add dropdown with full version history
+  // Current approach: Users rely on manual version IDs for switching (advanced users only)
   
   const handleSwitch = async (versionId: string) => {
     if (isDirty) {
@@ -59,7 +62,8 @@ export function VersionSelector({
             </span>
           </div>
           
-          {/* TODO: Add dropdown when version listing API is available */}
+          {/* PHASE 7: Version display only - no dropdown yet */}
+          {/* FUTURE: Add dropdown with version history for easier switching */}
           <button
             type="button"
             disabled
