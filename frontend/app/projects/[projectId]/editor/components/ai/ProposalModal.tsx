@@ -3,9 +3,11 @@
 import { useState, useEffect } from 'react';
 import { DiffViewer } from './DiffViewer';
 import { ProposalActions } from './ProposalActions';
+import { handleHttpError, getErrorMessage } from '@/lib/errorHandling';
 
 /**
  * PHASE 6: Proposal Modal Component
+ * PHASE 7.3: Enhanced error handling for missing proposals
  * 
  * Displays AI proposal with diff viewer and accept/reject controls
  * Triggered when AI job status becomes COMPLETED
@@ -16,6 +18,11 @@ import { ProposalActions } from './ProposalActions';
  * 3. User accepts or rejects
  * 4. On accept: create new version and switch editor
  * 5. On reject: discard proposal and close modal
+ * 
+ * PHASE 7.3: Robustness
+ * - Handles missing proposal data gracefully
+ * - Shows clear error messages
+ * - Prevents modal crash on API errors
  */
 
 interface ProposalModalProps {
@@ -56,13 +63,24 @@ export function ProposalModal({
         });
 
         if (!response.ok) {
-          throw new Error(`Failed to fetch proposal: ${response.statusText}`);
+          const errorInfo = await handleHttpError(response);
+          // PHASE 7.3: Custom message for 404 on proposal
+          if (errorInfo.statusCode === 404) {
+            throw new Error('Proposal not found. The AI job may not have generated a proposal.');
+          }
+          throw errorInfo;
         }
 
         const result = await response.json();
+        
+        // PHASE 7.3: Validate proposal data exists
+        if (!result || !result.proposedLatexContent) {
+          throw new Error('Proposal data is missing or incomplete.');
+        }
+        
         setProposedContent(result.proposedLatexContent);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error');
+        setError(getErrorMessage(err));
       } finally {
         setIsLoading(false);
       }
@@ -109,10 +127,34 @@ export function ProposalModal({
           )}
 
           {error && (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-red-600">
-                <strong>Error:</strong> {error}
+            <div className="flex flex-col items-center justify-center h-full space-y-4">
+              <div className="text-center max-w-md">
+                <svg
+                  className="mx-auto h-12 w-12 text-red-400 mb-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Failed to Load Proposal</h3>
+                <p className="text-red-600 text-sm">{error}</p>
+                <p className="text-gray-500 text-sm mt-2">
+                  The AI job completed, but the proposal could not be retrieved. Please try again or check the AI Jobs page.
+                </p>
               </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors text-sm"
+              >
+                Close
+              </button>
             </div>
           )}
 

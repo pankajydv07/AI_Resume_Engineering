@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { UserButton } from "@clerk/nextjs";
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { handleHttpError, getErrorMessage, isRetryableError } from '@/lib/errorHandling';
 
 /**
  * Dashboard Page (/dashboard)
@@ -65,13 +66,14 @@ export default function DashboardPage() {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch projects: ${response.statusText}`);
+        const errorInfo = await handleHttpError(response);
+        throw errorInfo;
       }
 
       const data: ProjectListItem[] = await response.json();
       setProjects(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(getErrorMessage(err));
     } finally {
       setIsLoading(false);
     }

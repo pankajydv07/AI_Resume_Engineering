@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
-
+import { useState, useCallback, useEffect } from 'react';import { handleHttpError, getErrorMessage } from '@/lib/errorHandling';
 /**
  * PHASE 3: Editor State Management Hook
  * 
@@ -62,7 +61,8 @@ export function useEditorState(projectId: string) {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to load version: ${response.statusText}`);
+        const errorInfo = await handleHttpError(response);
+        throw errorInfo;
       }
 
       const version: ResumeVersion = await response.json();
@@ -80,7 +80,7 @@ export function useEditorState(projectId: string) {
       setState(prev => ({
         ...prev,
         isLoading: false,
-        error: err instanceof Error ? err.message : 'Unknown error',
+        error: getErrorMessage(err),
       }));
     }
   }, []);
@@ -119,6 +119,60 @@ export function useEditorState(projectId: string) {
   }, [loadVersion]);
 
   /**
+   * PHASE 7.3: Load latest version for project
+   * Fetches all versions and loads the most recent one
+   * Safe for refresh scenarios
+   */
+  const loadLatestVersion = useCallback(async () => {
+    setState(prev => ({ ...prev, isLoading: true, error: null }));
+
+    try {
+      // Fetch all versions for this project
+      const response = await fetch(`http://localhost:3001/api/versions/project/${projectId}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          // TODO: Add Authorization header with Clerk JWT
+        },
+      });
+
+      if (!response.ok) {
+        const errorInfo = await handleHttpError(response);
+        throw errorInfo;
+      }
+
+      const versions: ResumeVersion[] = await response.json();
+
+      // If no versions exist, show empty state (not an error)
+      if (versions.length === 0) {
+        setState({
+          currentVersionId: null,
+          latexDraft: '',
+          isDirty: false,
+          isLoading: false,
+          error: null,
+          currentVersion: null,
+        });
+        return;
+      }
+
+      // Sort by createdAt descending and load the most recent
+      const sortedVersions = [...versions].sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      const latestVersion = sortedVersions[0];
+
+      // Load the latest version
+      await loadVersion(latestVersion.versionId);
+    } catch (err) {
+      setState(prev => ({
+        ...prev,
+        isLoading: false,
+        error: getErrorMessage(err),
+      }));
+    }
+  }, [projectId, loadVersion]);
+
+  /**
    * Save manual edit
    * Per apis.md Section 4.2: PUT /api/versions/{versionId}
    * Creates new MANUAL version, returns newVersionId
@@ -144,7 +198,8 @@ export function useEditorState(projectId: string) {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to save edit: ${response.statusText}`);
+        const errorInfo = await handleHttpError(response);
+        throw errorInfo;
       }
 
       const result = await response.json();
@@ -163,7 +218,7 @@ export function useEditorState(projectId: string) {
       setState(prev => ({
         ...prev,
         isLoading: false,
-        error: err instanceof Error ? err.message : 'Unknown error',
+        error: getErrorMessage(err),
       }));
       throw err;
     }
@@ -180,6 +235,7 @@ export function useEditorState(projectId: string) {
     
     // Actions
     loadVersion,
+    loadLatestVersion,
     updateDraft,
     switchVersion,
     saveEdit,

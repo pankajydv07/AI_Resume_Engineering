@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { handleHttpError, getErrorMessage } from '@/lib/errorHandling';
 
 /**
  * Project Detail Page (/projects/{projectId})
@@ -55,19 +56,23 @@ export default function ProjectPage() {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch projects: ${response.statusText}`);
+        const errorInfo = await handleHttpError(response);
+        throw errorInfo;
       }
 
       const projects: ProjectMetadata[] = await response.json();
       const currentProject = projects.find(p => p.projectId === projectId);
 
       if (!currentProject) {
-        throw new Error('Project not found');
+        // PHASE 7.3: Proper 404 handling
+        setError('Project not found');
+        setIsLoading(false);
+        return;
       }
 
       setProject(currentProject);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(getErrorMessage(err));
     } finally {
       setIsLoading(false);
     }
@@ -111,10 +116,20 @@ export default function ProjectPage() {
 
         {/* Error State */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-sm text-red-800">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+            <p className="text-sm text-red-800 mb-2">
               <strong>Error:</strong> {error}
             </p>
+            {error === 'Project not found' && (
+              <div className="mt-4">
+                <Link
+                  href="/dashboard"
+                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition text-sm"
+                >
+                  ← Back to Dashboard
+                </Link>
+              </div>
+            )}
           </div>
         )}
 

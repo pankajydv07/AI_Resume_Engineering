@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { handleHttpError, getErrorMessage } from '@/lib/errorHandling';
 
 /**
  * AI Jobs Page (/projects/{projectId}/ai-jobs)
@@ -53,13 +54,14 @@ export default function AIJobsPage() {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch AI jobs: ${response.statusText}`);
+        const errorInfo = await handleHttpError(response);
+        throw errorInfo;
       }
 
       const data: AIJob[] = await response.json();
       setAiJobs(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(getErrorMessage(err));
     } finally {
       setIsLoading(false);
     }

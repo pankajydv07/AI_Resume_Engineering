@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { handleHttpError, getErrorMessage } from '@/lib/errorHandling';
 
 /**
  * Job Descriptions Page (/projects/{projectId}/jd)
@@ -51,13 +52,14 @@ export default function JobDescriptionsPage() {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch job descriptions: ${response.statusText}`);
+        const errorInfo = await handleHttpError(response);
+        throw errorInfo;
       }
 
       const data: JobDescription[] = await response.json();
       setJds(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(getErrorMessage(err));
     } finally {
       setIsLoading(false);
     }

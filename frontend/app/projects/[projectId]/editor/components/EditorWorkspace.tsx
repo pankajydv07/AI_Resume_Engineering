@@ -35,6 +35,7 @@ export function EditorWorkspace({ projectId }: EditorWorkspaceProps) {
     error,
     currentVersion,
     loadVersion,
+    loadLatestVersion,
     updateDraft,
     switchVersion,
     saveEdit,
@@ -49,16 +50,11 @@ export function EditorWorkspace({ projectId }: EditorWorkspaceProps) {
     });
   };
 
-  // TODO: Load initial version (need to determine which version to load)
-  // Options:
-  // 1. Get version from URL query param (?versionId=xxx)
-  // 2. Load ACTIVE version (when status tracking is implemented)
-  // 3. Load latest version (when version listing API is available)
+  // PHASE 7.3: Auto-load latest version on mount
+  // Safe for refresh scenarios - loads most recent version or shows empty state
   useEffect(() => {
-    // Placeholder: Manual version loading required
-    // User must provide versionId to test editor
-    console.log('Editor mounted for project:', projectId);
-  }, [projectId]);
+    loadLatestVersion();
+  }, [loadLatestVersion]);
 
   return (
     <div className="flex flex-col h-screen">

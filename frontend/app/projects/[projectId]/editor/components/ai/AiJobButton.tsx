@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ProposalModal } from './ProposalModal';
+import { handleHttpError, getErrorMessage } from '@/lib/errorHandling';
 
 /**
  * PHASE 5: AI Job Button Component
  * PHASE 6: Enhanced with proposal viewing
  * PHASE 7.2: Button gating with helper text
+ * PHASE 7.3: Robustness - refresh behavior & lifecycle hardening
  * 
  * Triggers AI tailoring job and displays status
  * Shows proposal modal when job completes
@@ -23,6 +25,12 @@ import { ProposalModal } from './ProposalModal';
  * - "Start AI Tailoring" disabled if no baseVersionId OR no selectedJdId
  * - Helper text explains prerequisites
  * - "Review Proposal" only visible when status = COMPLETED
+ * 
+ * PHASE 7.3: Refresh Behavior
+ * - Component state (jobId, status, polling) resets on refresh
+ * - This is EXPECTED - job data persists on backend
+ * - User can view all jobs on /projects/{projectId}/ai-jobs page
+ * - No stuck UI states - component always starts fresh
  */
 
 interface AiJobButtonProps {
@@ -44,7 +52,21 @@ export function AiJobButton({
   const [status, setStatus] = useState<'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED' | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
+  const [isPolling, setIsPolling] = useState(false);
   const [showProposal, setShowProposal] = useState(false);
+  
+  // PHASE 7.3: Ref to track polling timeout for cleanup
+  const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // PHASE 7.3: Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingTimeoutRef.current) {
+        clearTimeout(pollingTimeoutRef.current);
+        pollingTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   const canStart = baseVersionId && selectedJdId && !jobId;
 
@@ -72,7 +94,8 @@ export function AiJobButton({
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to start AI job: ${response.statusText}`);
+        const errorInfo = await handleHttpError(response);
+        throw errorInfo;
       }
 
       const result = await response.json();
@@ -82,13 +105,16 @@ export function AiJobButton({
       // Start polling
       pollJobStatus(result.jobId);
     } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : 'Unknown error');
+      setErrorMessage(getErrorMessage(err));
     } finally {
       setIsStarting(false);
     }
   };
 
   const pollJobStatus = async (id: string) => {
+    // PHASE 7.3: Set polling state
+    setIsPolling(true);
+
     const poll = async () => {
       try {
         const response = await fetch(`http://localhost:3001/api/ai/jobs/${id}`, {
@@ -99,7 +125,8 @@ export function AiJobButton({
         });
 
         if (!response.ok) {
-          throw new Error(`Failed to get job status: ${response.statusText}`);
+          const errorInfo = await handleHttpError(response);
+          throw errorInfo;
         }
 
         const result = await response.json();
@@ -109,16 +136,27 @@ export function AiJobButton({
         // PHASE 7.2: Only show proposal modal automatically on first completion
         // User can click "Review Proposal" button to re-open if closed
         if (result.status === 'COMPLETED' && !showProposal) {
+          setIsPolling(false);
           setShowProposal(true);
+          return;
+        }
+
+        // PHASE 7.3: Stop polling on FAILED state
+        if (result.status === 'FAILED') {
+          setIsPolling(false);
           return;
         }
 
         // Continue polling if not complete
         if (result.status === 'QUEUED' || result.status === 'RUNNING') {
-          setTimeout(() => poll(), 2000); // Poll every 2 seconds
+          // PHASE 7.3: Store timeout ref for cleanup
+          pollingTimeoutRef.current = setTimeout(() => poll(), 2000);
+        } else {
+          setIsPolling(false);
         }
       } catch (err) {
-        setErrorMessage(err instanceof Error ? err.message : 'Unknown error');
+        setErrorMessage(getErrorMessage(err));
+        setIsPolling(false);
       }
     };
 
@@ -126,9 +164,15 @@ export function AiJobButton({
   };
 
   const resetJob = () => {
+    // PHASE 7.3: Clear polling timeout if active
+    if (pollingTimeoutRef.current) {
+      clearTimeout(pollingTimeoutRef.current);
+      pollingTimeoutRef.current = null;
+    }
     setJobId(null);
     setStatus(null);
     setErrorMessage(null);
+    setIsPolling(false);
     setShowProposal(false);
   };
 
@@ -183,16 +227,22 @@ export function AiJobButton({
       {status && (
         <div className="mb-3">
           <div className="text-xs text-gray-500 mb-1">Job Status</div>
-          <div className={`text-sm font-medium ${
-            status === 'COMPLETED' ? 'text-green-600' :
-            status === 'FAILED' ? 'text-red-600' :
-            status === 'RUNNING' ? 'text-blue-600' :
-            'text-gray-600'
-          }`}>
-            {status === 'QUEUED' && '⏳ Queued'}
-            {status === 'RUNNING' && '▶ Running'}
-            {status === 'COMPLETED' && '✓ Completed'}
-            {status === 'FAILED' && '✗ Failed'}
+          <div className="flex items-center gap-2">
+            {/* PHASE 7.3: Loading indicator while polling */}
+            {isPolling && (
+              <div className="animate-spin rounded-full h-3 w-3 border-2 border-blue-600 border-t-transparent" />
+            )}
+            <div className={`text-sm font-medium ${
+              status === 'COMPLETED' ? 'text-green-600' :
+              status === 'FAILED' ? 'text-red-600' :
+              status === 'RUNNING' ? 'text-blue-600' :
+              'text-gray-600'
+            }`}>
+              {status === 'QUEUED' && '⏳ Queued'}
+              {status === 'RUNNING' && '▶ Running'}
+              {status === 'COMPLETED' && '✓ Completed'}
+              {status === 'FAILED' && '✗ Failed'}
+            </div>
           </div>
           {jobId && (
             <div className="text-xs text-gray-400 mt-1">
@@ -224,13 +274,13 @@ export function AiJobButton({
           Review Proposal
         </button>
       ) : status === 'FAILED' ? (
-        /* Failed - allow starting new job */
+        /* PHASE 7.3: Failed state - allow retry with clear button */
         <button
           type="button"
           onClick={resetJob}
-          className="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
+          className="w-full px-4 py-2 text-sm font-medium text-white bg-orange-600 rounded hover:bg-orange-700 transition-colors"
         >
-          Start New Job
+          ↻ Retry AI Tailoring
         </button>
       ) : (
         /* In progress - show disabled button */
@@ -246,7 +296,7 @@ export function AiJobButton({
       {/* Phase Notice */}
       <div className="mt-3 pt-3 border-t border-gray-200">
         <div className="text-xs text-gray-500">
-          PHASE 7.2: Button gating with helper text. Review proposal only shown when complete.
+          PHASE 7.3: Lifecycle hardening - polling cleanup, loading state, graceful error handling.
         </div>
       </div>
 
