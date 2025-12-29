@@ -1,189 +1,190 @@
-# JD-Aware Resume Engineering SaaS
+# AI Resume Engineering System
 
-A multi-tenant platform for generating job-description-specific resume versions with LaTeX safety, version control, and complete auditability.
+## Project Overview
 
-## Project Status
+**Problem:** Job seekers need to tailor resumes for specific job descriptions, but manual editing is time-consuming, error-prone, and risks losing good content. Existing AI tools silently overwrite content without review, creating trust and auditability issues.
 
-**Current Phase:** PHASE 1 - SCAFFOLDING (Frontend)
+**Solution:** This system treats AI as a **proposal generator**, not an authority. Users maintain full control through explicit review and approval workflows. Every edit—manual or AI-generated—creates an immutable version with full audit history. The system enforces clear trust boundaries between human judgment and AI suggestions, ensuring no content changes without explicit user consent.
+
+## Core Design Principles
+
+### 1. Version Immutability
+Every resume state is an immutable `ResumeVersion`. Edits don't modify existing versions—they create new ones. This ensures complete audit history and enables safe experimentation without fear of losing work.
+
+### 2. AI as Proposal, Not Authority
+AI-generated content never directly enters the user's resume. Instead, the system creates a `ProposedVersion` for review. Users see a side-by-side diff and explicitly choose to accept or reject. AI serves humans; humans serve job applications.
+
+### 3. Explicit User Consent
+No automatic actions. No silent updates. Every state transition requires explicit user action:
+- **Manual edits** → User clicks "Save"
+- **AI proposals** → User clicks "Accept" or "Reject"
+- **Version switching** → User selects from dropdown
+
+### 4. Contract-Driven Development
+All components operate on well-defined contracts (TypeScript interfaces, Prisma models, API schemas). Backend and frontend are loosely coupled through REST APIs. Each layer can evolve independently as long as contracts are honored.
+
+## Architecture Overview
+
+### Core Entities
+
+**ResumeVersion**  
+The fundamental unit of state. Represents a specific resume snapshot with:
+- `type`: `BASE` (initial upload), `MANUAL` (user edited), `AI_GENERATED` (accepted AI proposal)
+- `status`: `DRAFT`, `COMPILED` (has PDF), `ERROR`, `ACTIVE` (current working version)
+- `latexContent`: The actual resume source
+- `pdfUrl`: Compiled PDF location (when applicable)
+- Immutable after creation; edits spawn new versions
+
+**AIJob**  
+Represents an AI tailoring task. Contains:
+- `status`: `QUEUED`, `RUNNING`, `COMPLETED`, `FAILED`
+- References to `baseVersion` (input) and `jdId` (target job description)
+- `mode`: `MINIMAL`, `BALANCED`, `AGGRESSIVE` (tailoring intensity)
+- `lockedSections`: User-specified content that AI must not modify
+
+**ProposedVersion**  
+The proposed content from an AI job. Stored separately from `ResumeVersion` until user accepts. Contains:
+- `proposedLatexContent`: AI-generated resume
+- Link to parent `AIJob`
+- Exists in limbo—not part of version history until accepted
+
+### Separation of Concerns
+
+- **Frontend**: Manages UI state (draft content, dirty flags, loading states). Never mutates backend data directly.
+- **Backend**: Enforces business rules (version immutability, job status transitions). Single source of truth.
+- **Database**: Stores all versions, jobs, and proposals. Prisma ORM ensures type safety.
+- **AI Layer** *(placeholder)*: Invoked via backend API. Frontend never calls AI directly.
+
+## User Flow (Step-by-Step)
+
+### 1. Dashboard → Project
+- User logs in, sees all `ResumeProject` entries
+- Clicks project or creates new one
+- Navigates to project detail page with links to Editor, Job Descriptions, AI Jobs
+
+### 2. Editor → Load Version
+- Editor loads latest `ResumeVersion` on mount (auto-load)
+- User sees LaTeX editor (left), PDF preview (right)
+- Can switch versions via dropdown selector
+- Edits modify in-memory draft only (`isDirty` flag tracks unsaved changes)
+
+### 3. Manual Editing → Save
+- User clicks "Save Changes"
+- Backend creates new `ResumeVersion` (type: `MANUAL`)
+- Old version remains unchanged (immutability)
+- Editor loads new version
+
+### 4. Job Description → AI Tailoring
+- User opens JD panel (right side of editor)
+- Pastes job description → backend creates `JobDescription` entity
+- User selects JD from list → "Start AI Tailoring" button becomes active
+
+### 5. AI Job → Proposal
+- User clicks "Start AI Tailoring"
+- Backend creates `AIJob` (status: `QUEUED`)
+- Frontend polls job status every 2 seconds
+- AI processes resume against JD → generates `ProposedVersion`
+- Job status becomes `COMPLETED`
+
+### 6. Diff Review → Decision
+- Proposal modal appears automatically on completion
+- Shows side-by-side diff: current resume (left) vs. AI proposal (right)
+- User sees exactly what will change
+- User clicks "Accept" or "Reject"
+
+### 7. Accept → New Version
+- If accepted: backend creates new `ResumeVersion` (type: `AI_GENERATED`)
+- Editor switches to new version
+- If rejected: proposal discarded, no version created
+- In both cases: `AIJob` and `ProposedVersion` remain in history for audit
+
+## Phase-Based Development Strategy
+
+The system was built incrementally across 7 phases, each adding one cohesive feature set:
+
+- **Phase 1**: Clerk auth + user/project models
+- **Phase 2**: Resume upload + BASE version creation
+- **Phase 3**: LaTeX editor + PDF preview + version loading
+- **Phase 4**: Job description management
+- **Phase 5**: AI job triggering + status polling
+- **Phase 6**: Proposal viewing + diff display + accept/reject workflow
+- **Phase 7**: UX polish, robustness, error handling, edge-case hardening
+
+**Why phased?** Each phase delivers a functional vertical slice. Every phase is testable and deployable independently. This approach reduces integration risk and allows for early validation of core assumptions (e.g., "Can users understand the diff view?").
 
 ## Tech Stack
 
 ### Frontend
-- Next.js 14 (App Router)
-- TypeScript
-- Tailwind CSS
-- Clerk Authentication
+- **Next.js 14** (App Router): React framework with server components
+- **TypeScript**: Type safety across all components
+- **Tailwind CSS**: Utility-first styling
+- **Clerk**: Authentication (session management, user context)
 
-### Backend (Not Yet Implemented)
-- NestJS (REST)
-- TypeScript
-- Prisma ORM
-- PostgreSQL
+### Backend
+- **NestJS**: TypeScript framework with dependency injection
+- **Prisma ORM**: Type-safe database access, migration management
+- **PostgreSQL 18**: Relational database for structured data
+- **REST APIs**: JSON over HTTP (no GraphQL/gRPC for simplicity)
 
-## Getting Started
+### Database
+- **PostgreSQL**: ACID compliance for version immutability guarantees
+- **Prisma Schema**: Single source of truth for data model
 
-### Prerequisites
-- Node.js 20+
-- npm or yarn
+### Auth
+- **Clerk**: Handles OAuth, JWTs, user sessions
+- Backend validates JWT on every protected route
 
-### Installation
+### AI *(Placeholder)*
+- Planned: OpenAI API integration for resume tailoring
+- Current: Mock AI job processing (status transitions only)
 
-1. Clone the repository:
-```bash
-git clone <repository-url>
-cd myresumeproject
-```
+## What This Project Intentionally Does NOT Do (Yet)
 
-2. Install frontend dependencies:
-```bash
-cd frontend
-npm install
-```
+### No Auto-Apply
+AI proposals never automatically become active versions. User must explicitly review and accept.
 
-3. Install backend dependencies:
-```bash
-cd ../backend
-npm install
-```
+### No Silent Overwrites
+All changes (manual or AI) create new versions. Old versions are never modified or deleted.
 
-4. Set up frontend environment variables:
-```bash
-cd ../frontend
-cp .env.local.example .env.local
-# Edit .env.local and add your Clerk keys from https://dashboard.clerk.com
-```
+### No AI Editing Without Review
+AI-generated content remains in `ProposedVersion` limbo until user sees the diff and accepts.
 
-5. Set up backend environment variables:
-```bash
-cd ../backend
-cp .env.example .env
-# Edit .env if needed (defaults should work for development)
-```
+### No Partial Diff Acceptance
+Users accept or reject the entire proposal. No line-by-line cherry-picking (this is a deliberate simplification; partial acceptance adds significant UX complexity).
 
-6. Run the development servers:
-```bash
-# Terminal 1 - Frontend
-cd frontend
-npm run dev
+### No Version Deletion
+Versions are immutable and permanent. Users can switch between versions, but cannot delete history.
 
-# Terminal 2 - Backend
-cd backend
-npm run start:dev
-```
+### No Collaborative Editing
+Single-user system. No real-time collaboration, no conflict resolution. One user owns one project.
 
-7. Open your browser:
-- Frontend: [http://localhost:3000](http://localhost:3000)
-- Backend: [http://localhost:3001/api](http://localhost:3001/api)
+## Why This Architecture Is Safe for AI
 
-## Project Structure
+### 1. Explicit Trust Boundaries
+AI output is quarantined in `ProposedVersion` until user consent. The version graph clearly distinguishes `AI_GENERATED` from `MANUAL` types.
 
-```
-d:\myresumeproject/
-├── .github/
-│   ├── copilot-instructions.md    # AI assistant guidelines
-│   └── instructions/               # Contract files (source of truth)
-│       ├── rules.md               # AI governance (HIGHEST AUTHORITY)
-│       ├── database.md            # Database schema
-│       ├── apis.md                # API contracts
-│       ├── userflow.md            # UX flows and pages
-│       └── agents.md              # Project identity and scope
-├── frontend/                       # Next.js frontend application
-│   ├── app/
-│   │   ├── layout.tsx             # Root layout with Clerk provider
-│   │   ├── page.tsx               # Landing page (/)
-│   │   ├── globals.css            # Tailwind styles
-│   │   ├── dashboard/
-│   │   │   └── page.tsx          # Protected dashboard
-│   │   ├── sign-in/
-│   │   │   └── [[...sign-in]]/page.tsx
-│   │   └── sign-up/
-│   │       └── [[...sign-up]]/page.tsx
-│   ├── middleware.ts              # Clerk auth middleware
-│   ├── package.json
-│   ├── tsconfig.json
-│   ├── next.config.ts
-│   └── tailwind.config.ts
-└── backend/                        # NestJS backend (not yet implemented)
-```
+### 2. Auditability
+Every AI job is recorded with:
+- Input version (`baseVersionId`)
+- Target job description (`jdId`)
+- Tailoring mode and locked sections
+- Timestamp and status transitions
 
-## Development Philosophy
+If a user asks "Why does my resume say X?", we can trace it to a specific AI job or manual edit.
 
-This project follows **contract-driven development**:
-- Design contracts BEFORE code (`.github/instructions/*.md`)
-- Code NEVER drives design
-- AI assistants act as junior engineers following strict contracts
-- Immutability by default (versions, not mutations)
+### 3. Version History Preservation
+Immutability means users can always revert. If an AI proposal is bad, reject it. If an accepted proposal turns out poorly, switch back to the previous version. No data loss.
 
-See [.github/copilot-instructions.md](.github/copilot-instructions.md) for detailed guidelines.
+### 4. No Hidden State
+All AI decisions are visible in the diff view. Users see exactly what changed and why (via job parameters). No black-box transformations.
 
-## Available Scripts
+### 5. User Agency
+Users retain full control. AI is a tool, not a decision-maker. The system enforces this through:
+- Manual approval for all AI content
+- Ability to reject any proposal
+- Full access to all previous versions
+- Option to manually edit any content
 
-### Frontend (from `frontend/` directory)
-- `npm run dev` - Start Next.js development server (port 3000)
-- `npm run build` - Build for production
-- `npm run start` - Start production server
-- `npm run lint` - Run ESLint
+---
 
-### Backend (from `backend/` directory)
-- `npm run start:dev` - Start NestJS development server (port 3001)
-- `npm run build` - Build for production
-- `npm run start` - Start production server
-- `npm run lint` - Run ESLint
-
-## Contract Files (Source of Truth)
-
-All development must follow these files in priority order:
-
-1. `.github/instructions/rules.md` - AI governance (THE LAW)
-2. `.github/instructions/database.md` - Database schema
-3. `.github/instructions/apis.md` - API contracts
-4. `.github/instructions/userflow.md` - UX flows
-5. `.github/instructions/agents.md` - Project identity
-
-## What's Implemented (PHASE 1: SCAFFOLDING)
-
-### Frontend ✅
-✅ Next.js project configuration  
-✅ TypeScript setup  
-✅ Tailwind CSS styling  
-✅ Clerk authentication integration  
-✅ Landing page (/)  
-✅ Sign-in page (/sign-in)  
-✅ Sign-up page (/sign-up)  
-✅ Protected dashboard (/dashboard)  
-✅ Route protection middleware  
-
-### Backend ✅
-✅ Complete NestJS modular structure  
-✅ All modules: auth, projects, versions, jd, ai-jobs, prisma  
-✅ All controllers exposing endpoints from apis.md  
-✅ All services with placeholder responses  
-✅ All DTOs matching apis.md contracts exactly  
-✅ Clerk auth guard (placeholder)  
-✅ Global validation pipeline  
-✅ CORS configuration  
-
-## What's NOT Implemented (Future Phases)
-
-❌ Database connection (Prisma + PostgreSQL)  
-❌ Clerk JWT validation  
-❌ Business logic in services  
-❌ Resume editor UI  
-❌ LaTeX compilation  
-❌ AI tailoring logic  
-❌ Async job processing  
-❌ File storage (S3)  
-❌ Version management logic  
-❌ JD analysis logic  
-
-## Contributing
-
-Before making any changes:
-1. Read `.github/instructions/rules.md` (HIGHEST AUTHORITY)
-2. Check relevant contract files (database.md, apis.md, userflow.md)
-3. Update contract files FIRST if adding new features
-4. Then implement following the contracts exactly
-
-## License
-
-[To be determined]
+**Status**: Phase 7 complete (UX polish + robustness hardening). System is functional for end-to-end resume tailoring workflow with manual and AI-generated edits.
