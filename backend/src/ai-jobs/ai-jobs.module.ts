@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AiJobsController } from './ai-jobs.controller';
 import { AiJobsService } from './ai-jobs.service';
+import { DiffService } from './diff.service';
 
 /**
  * AI Jobs Module
@@ -10,7 +11,7 @@ import { AiJobsService } from './ai-jobs.service';
  */
 @Module({
   controllers: [AiJobsController],
-  providers: [AiJobsService],
+  providers: [AiJobsService, DiffService],
   exports: [AiJobsService],
 })
 export class AiJobsModule {}

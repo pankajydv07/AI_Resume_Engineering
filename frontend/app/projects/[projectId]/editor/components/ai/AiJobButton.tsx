@@ -1,34 +1,44 @@
 'use client';
 
 import { useState } from 'react';
+import { ProposalModal } from './ProposalModal';
 
 /**
  * PHASE 5: AI Job Button Component
+ * PHASE 6: Enhanced with proposal viewing
  * 
  * Triggers AI tailoring job and displays status
+ * Shows proposal modal when job completes
  * 
  * Per apis.md Section 6:
  * - POST /api/ai/tailor to start job
  * - GET /api/ai/jobs/{jobId} to poll status
  * 
- * Forbidden:
- * - No resume updates
- * - No diff UI
- * - No accept/reject
- * - No auto-apply
+ * PHASE 6: Proposal viewing
+ * - Shows ProposalModal when status = COMPLETED
+ * - Handles accept/reject actions
  */
 
 interface AiJobButtonProps {
   projectId: string;
   baseVersionId: string | null;
   selectedJdId: string | null;
+  baseLatexContent: string;
+  onVersionChange: (newVersionId: string) => void;
 }
 
-export function AiJobButton({ projectId, baseVersionId, selectedJdId }: AiJobButtonProps) {
+export function AiJobButton({ 
+  projectId, 
+  baseVersionId, 
+  selectedJdId,
+  baseLatexContent,
+  onVersionChange,
+}: AiJobButtonProps) {
   const [jobId, setJobId] = useState<string | null>(null);
   const [status, setStatus] = useState<'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED' | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
+  const [showProposal, setShowProposal] = useState(false);
 
   const canStart = baseVersionId && selectedJdId && !jobId;
 
@@ -90,6 +100,12 @@ export function AiJobButton({ projectId, baseVersionId, selectedJdId }: AiJobBut
         setStatus(result.status);
         setErrorMessage(result.errorMessage);
 
+        // If completed, show proposal modal
+        if (result.status === 'COMPLETED') {
+          setShowProposal(true);
+          return;
+        }
+
         // Continue polling if not complete
         if (result.status === 'QUEUED' || result.status === 'RUNNING') {
           setTimeout(() => poll(), 2000); // Poll every 2 seconds
@@ -106,6 +122,16 @@ export function AiJobButton({ projectId, baseVersionId, selectedJdId }: AiJobBut
     setJobId(null);
     setStatus(null);
     setErrorMessage(null);
+    setShowProposal(false);
+  };
+
+  const handleProposalAccepted = (newVersionId: string) => {
+    onVersionChange(newVersionId);
+    resetJob();
+  };
+
+  const handleProposalRejected = () => {
+    resetJob();
   };
 
   return (
@@ -180,9 +206,22 @@ export function AiJobButton({ projectId, baseVersionId, selectedJdId }: AiJobBut
       {/* Phase Notice */}
       <div className="mt-3 pt-3 border-t border-gray-200">
         <div className="text-xs text-gray-500">
-          PHASE 5: Job infrastructure only. No resume generation yet.
+          PHASE 6: AI proposal workflow. Explicit acceptance required.
         </div>
       </div>
+
+      {/* Proposal Modal */}
+      {showProposal && jobId && baseVersionId && (
+        <ProposalModal
+          aiJobId={jobId}
+          projectId={projectId}
+          baseVersionId={baseVersionId}
+          baseLatexContent={baseLatexContent}
+          onAccepted={handleProposalAccepted}
+          onRejected={handleProposalRejected}
+          onClose={() => setShowProposal(false)}
+        />
+      )}
     </div>
   );
 }

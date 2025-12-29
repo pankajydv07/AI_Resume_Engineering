@@ -178,9 +178,33 @@ model AIJob {
   updatedAt     DateTime    @updatedAt
 
   // Relations with explicit delete behavior
-  project     ResumeProject   @relation(fields: [projectId], references: [id], onDelete: Restrict)
-  baseVersion ResumeVersion   @relation(fields: [baseVersionId], references: [id], onDelete: Restrict)
-  jd          JobDescription  @relation(fields: [jdId], references: [id], onDelete: Restrict)
+  project         ResumeProject    @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  baseVersion     ResumeVersion    @relation(fields: [baseVersionId], references: [id], onDelete: Restrict)
+  jd              JobDescription   @relation(fields: [jdId], references: [id], onDelete: Restrict)
+  proposedVersion ProposedVersion? // 1:1 relation (optional)
+}
+
+/// ProposedVersion (database.md Section 4.7)
+/// Stores AI-generated resume proposals before user acceptance
+/// Purpose:
+/// - Temporary storage for AI output
+/// - User can review before accepting
+/// - Not a ResumeVersion until accepted
+/// - Deleted or overwritten on new proposal
+///
+/// Rules:
+/// - One proposal per AIJob
+/// - Must NOT be auto-applied to editor
+/// - User must explicitly accept to create ResumeVersion
+model ProposedVersion {
+  id                    String   @id @default(uuid())
+  aiJobId               String   @unique
+  proposedLatexContent  String   @db.Text
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Relations with explicit delete behavior
+  aiJob AIJob @relation(fields: [aiJobId], references: [id], onDelete: Cascade)
 }
 
 /// VersionDiff (database.md Section 4.7)

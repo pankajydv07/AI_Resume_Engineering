@@ -203,7 +203,32 @@ Rules:
 
 ---
 
-### 4.7 VersionDiff
+### 4.7 ProposedVersion
+
+Stores AI-generated resume proposals before user acceptance.
+
+  ProposedVersion
+  id UUID (PK)
+  aiJobId UUID (FK → AIJob, unique)
+  proposedLatexContent TEXT
+  createdAt TIMESTAMP
+  updatedAt TIMESTAMP
+
+
+Purpose:
+- Temporary storage for AI output
+- User can review before accepting
+- Not a ResumeVersion until accepted
+- Deleted or overwritten on new proposal
+
+Rules:
+- One proposal per AIJob
+- Must NOT be auto-applied to editor
+- User must explicitly accept to create ResumeVersion
+
+---
+
+### 4.8 VersionDiff
 
 Explains differences between resume versions.
 
@@ -233,6 +258,7 @@ User
 │ └── ResumeSection
 ├── JobDescription
 ├── AIJob
+│ └── ProposedVersion (1:1)
 └── VersionDiff
 
 yaml

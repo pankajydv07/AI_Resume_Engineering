@@ -8,6 +8,7 @@ import { AiJobButton } from '../ai/AiJobButton';
 /**
  * PHASE 4: JD Management Panel
  * PHASE 5: AI Job Trigger (added)
+ * PHASE 6: Enhanced with version change callback
  * 
  * Manages JD state completely separate from resume editor state
  * 
@@ -25,10 +26,12 @@ import { AiJobButton } from '../ai/AiJobButton';
 
 interface JdPanelProps {
   projectId: string;
-  baseVersionId: string | null; // PHASE 5: Pass from parent
+  baseVersionId: string | null;
+  baseLatexContent: string;
+  onVersionChange: (newVersionId: string) => void;
 }
 
-export function JdPanel({ projectId, baseVersionId }: JdPanelProps) {
+export function JdPanel({ projectId, baseVersionId, baseLatexContent, onVersionChange }: JdPanelProps) {
   const [selectedJdId, setSelectedJdId] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -68,10 +71,13 @@ export function JdPanel({ projectId, baseVersionId }: JdPanelProps) {
       />
 
       {/* PHASE 5: AI Job Button */}
+      {/* PHASE 6: Enhanced with proposal workflow */}
       <AiJobButton
         projectId={projectId}
         baseVersionId={baseVersionId}
         selectedJdId={selectedJdId}
+        baseLatexContent={baseLatexContent}
+        onVersionChange={onVersionChange}
       />
     </div>
   );

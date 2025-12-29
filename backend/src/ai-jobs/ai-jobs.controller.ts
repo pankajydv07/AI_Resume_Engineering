@@ -3,6 +3,8 @@ import { ClerkAuthGuard } from '../auth/guards/clerk-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { AiJobsService } from './ai-jobs.service';
 import { StartAiTailoringDto, StartAiTailoringResponseDto, AiJobStatusDto } from './dto/ai-job.dto';
+import { AcceptProposalDto, AcceptProposalResponseDto, RejectProposalDto, RejectProposalResponseDto } from './dto/proposal.dto';
+import { GetProposalResponseDto } from './dto/get-proposal.dto';
 
 /**
  * AI Jobs Controller
@@ -11,6 +13,7 @@ import { StartAiTailoringDto, StartAiTailoringResponseDto, AiJobStatusDto } from
  * All endpoints from apis.md Section 6
  * 
  * PHASE 5: AI JOB INFRASTRUCTURE (NO REWRITING)
+ * PHASE 6: AI RESUME TAILORING (PROPOSAL ONLY)
  * - ClerkAuthGuard active
  * - Ownership verified via project relationship
  * - Real database operations for AIJob storage and retrieval
@@ -60,5 +63,59 @@ export class AiJobsController {
     @CurrentUser() userId: string,
   ): Promise<AiJobStatusDto> {
     return this.aiJobsService.getJobStatus(jobId, userId);
+  }
+
+  /**
+   * GET /api/ai/jobs/:jobId/proposal
+   * Get proposal content for completed AI job
+   * PHASE 6: Proposal retrieval
+   * 
+   * Returns proposedLatexContent from ProposedVersion
+   */
+  @Get('jobs/:jobId/proposal')
+  async getProposal(
+    @Param('jobId') jobId: string,
+    @CurrentUser() userId: string,
+  ): Promise<GetProposalResponseDto> {
+    return this.aiJobsService.getProposal(jobId, userId);
+  }
+
+  /**
+   * POST /api/ai/proposal/accept
+   * Accept AI proposal and create new resume version
+   * PHASE 6: Proposal acceptance
+   * 
+   * Behavior:
+   * - Creates AI_GENERATED ResumeVersion from ProposedVersion
+   * - Sets parentVersionId to baseVersionId
+   * - Returns new versionId
+   * 
+   * Forbidden:
+   * - No partial acceptance
+   * - No silent apply
+   */
+  @Post('proposal/accept')
+  async acceptProposal(
+    @Body() acceptProposalDto: AcceptProposalDto,
+    @CurrentUser() userId: string,
+  ): Promise<AcceptProposalResponseDto> {
+    return this.aiJobsService.acceptProposal(acceptProposalDto, userId);
+  }
+
+  /**
+   * POST /api/ai/proposal/reject
+   * Reject AI proposal and discard
+   * PHASE 6: Proposal rejection
+   * 
+   * Behavior:
+   * - Deletes ProposedVersion
+   * - Resume remains unchanged
+   */
+  @Post('proposal/reject')
+  async rejectProposal(
+    @Body() rejectProposalDto: RejectProposalDto,
+    @CurrentUser() userId: string,
+  ): Promise<RejectProposalResponseDto> {
+    return this.aiJobsService.rejectProposal(rejectProposalDto, userId);
   }
 }

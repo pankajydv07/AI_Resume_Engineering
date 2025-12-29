@@ -123,6 +123,10 @@ export function EditorWorkspace({ projectId }: EditorWorkspaceProps) {
             <JdPanel 
               projectId={projectId} 
               baseVersionId={currentVersionId}
+              baseLatexContent={latexDraft}
+              onVersionChange={(newVersionId) => {
+                switchVersion(newVersionId);
+              }}
             />
           </div>
         )}
