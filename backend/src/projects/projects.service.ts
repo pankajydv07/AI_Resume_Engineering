@@ -57,7 +57,7 @@ export class ProjectsService {
           projectId: project.id,
           parentVersionId: null, // Base version has no parent
           type: 'BASE',
-          status: 'DRAFT',
+          status: 'ACTIVE', // PHASE 2: Set to ACTIVE so editor can load it
           latexContent: '\\documentclass{article}\n\\begin{document}\n% Your resume content here\n\\end{document}',
           pdfUrl: null,
         },
@@ -100,6 +100,7 @@ export class ProjectsService {
     return projects.map((project) => ({
       projectId: project.id,
       name: project.name,
+      createdAt: project.createdAt.toISOString(),
       updatedAt: project.updatedAt.toISOString(),
       versionCount: project.versions.length,
     }));

@@ -2,7 +2,7 @@ import { Controller, Post, Get, Param, Body, UseGuards } from '@nestjs/common';
 import { ClerkAuthGuard } from '../auth/guards/clerk-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { AiJobsService } from './ai-jobs.service';
-import { StartAiTailoringDto, StartAiTailoringResponseDto, AiJobStatusDto } from './dto/ai-job.dto';
+import { StartAiTailoringDto, StartAiTailoringResponseDto, AiJobStatusDto, AiJobListItemDto } from './dto/ai-job.dto';
 import { AcceptProposalDto, AcceptProposalResponseDto, RejectProposalDto, RejectProposalResponseDto } from './dto/proposal.dto';
 import { GetProposalResponseDto } from './dto/get-proposal.dto';
 
@@ -43,6 +43,24 @@ export class AiJobsController {
     @CurrentUser() userId: string,
   ): Promise<StartAiTailoringResponseDto> {
     return this.aiJobsService.startTailoring(startTailoringDto, userId);
+  }
+
+  /**
+   * GET /api/ai/jobs/project/:projectId
+   * List all AI jobs for a project
+   * From apis.md Section 6.3
+   * 
+   * Returns all AI tailoring jobs for the project
+   * 
+   * CRITICAL: This MUST be defined BEFORE jobs/:jobId route
+   * to avoid route collision (NestJS matches routes in order)
+   */
+  @Get('jobs/project/:projectId')
+  async listJobsForProject(
+    @Param('projectId') projectId: string,
+    @CurrentUser() userId: string,
+  ): Promise<AiJobListItemDto[]> {
+    return this.aiJobsService.listJobsForProject(projectId, userId);
   }
 
   /**

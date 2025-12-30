@@ -40,3 +40,17 @@ export class AiJobStatusDto {
   newVersionId: string | null;
   errorMessage: string | null;
 }
+
+/**
+ * Response DTO for listing AI jobs for a project
+ * From apis.md Section 6.3
+ */
+export class AiJobListItemDto {
+  jobId: string;
+  projectId: string;
+  jdId: string;
+  baseVersionId: string;
+  status: 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+  createdAt: string;
+  updatedAt: string;
+}

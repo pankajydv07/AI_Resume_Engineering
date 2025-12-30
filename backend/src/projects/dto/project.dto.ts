@@ -24,6 +24,7 @@ export class CreateProjectResponseDto {
 export class ProjectListItemDto {
   projectId: string;
   name: string;
+  createdAt: string;
   updatedAt: string;
   versionCount: number;
 }

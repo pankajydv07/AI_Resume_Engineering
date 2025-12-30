@@ -21,13 +21,13 @@ import { handleHttpError, getErrorMessage } from '@/lib/errorHandling';
  */
 
 interface AIJob {
-  aiJobId: string;
+  jobId: string;
   projectId: string;
   jdId: string;
   baseVersionId: string;
-  status: 'QUEUED' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  status: 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED';
   createdAt: string;
-  completedAt: string | null;
+  updatedAt: string;
 }
 
 export default function AIJobsPage() {
@@ -55,7 +55,7 @@ export default function AIJobsPage() {
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch(`http://localhost:3001/api/ai-jobs/project/${projectId}`, {
+      const response = await fetch(`http://localhost:3001/api/ai/jobs/project/${projectId}`, {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
@@ -179,7 +179,7 @@ export default function AIJobsPage() {
         {!isLoading && !error && aiJobs.length > 0 && (
           <div className="space-y-4">
             {aiJobs.map((job) => (
-              <div key={job.aiJobId} className="bg-white rounded-lg shadow p-6">
+              <div key={job.jobId} className="bg-white rounded-lg shadow p-6">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
@@ -187,17 +187,15 @@ export default function AIJobsPage() {
                         {job.status}
                       </span>
                       <span className="text-xs text-gray-500 font-mono">
-                        {job.aiJobId.substring(0, 8)}
+                        {job.jobId.substring(0, 8)}
                       </span>
                     </div>
                     <p className="text-sm text-gray-600">
                       Created: {formatDate(job.createdAt)}
                     </p>
-                    {job.completedAt && (
-                      <p className="text-sm text-gray-600">
-                        Completed: {formatDate(job.completedAt)}
-                      </p>
-                    )}
+                    <p className="text-sm text-gray-600">
+                      Updated: {formatDate(job.updatedAt)}
+                    </p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4 text-sm mt-4">

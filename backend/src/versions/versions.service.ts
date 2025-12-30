@@ -273,4 +273,50 @@ export class VersionsService {
     // For now, return placeholder
     return '\\documentclass{article}\n\\begin{document}\nPlaceholder\n\\end{document}';
   }
+
+  /**
+   * Get active version for a project
+   * PHASE 2: Critical for editor loading
+   * 
+   * Returns the LATEST version for a project (most recently created)
+   * Used by frontend to load editor after project creation
+   */
+  async getActiveVersionForProject(projectId: string, userId: string): Promise<ResumeVersionDto> {
+    // Verify project ownership first
+    const project = await this.prisma.resumeProject.findUnique({
+      where: { id: projectId },
+    });
+
+    if (!project) {
+      throw new NotFoundException(`Project ${projectId} not found`);
+    }
+
+    if (project.userId !== userId) {
+      throw new ForbiddenException('You do not have access to this project');
+    }
+
+    // Find the LATEST version (most recently created)
+    const version = await this.prisma.resumeVersion.findFirst({
+      where: {
+        projectId,
+      },
+      orderBy: {
+        createdAt: 'desc', // Most recent version
+      },
+    });
+
+    if (!version) {
+      throw new NotFoundException(`No versions found for project ${projectId}`);
+    }
+
+    return {
+      versionId: version.id,
+      projectId: version.projectId,
+      type: version.type,
+      status: version.status,
+      latexContent: version.latexContent,
+      pdfUrl: version.pdfUrl,
+      createdAt: version.createdAt.toISOString(),
+    };
+  }
 }

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { StartAiTailoringDto, StartAiTailoringResponseDto, AiJobStatusDto } from './dto/ai-job.dto';
+import { StartAiTailoringDto, StartAiTailoringResponseDto, AiJobStatusDto, AiJobListItemDto } from './dto/ai-job.dto';
 
 /**
  * AI Jobs Service
@@ -392,5 +392,45 @@ export class AiJobsService {
     return {
       proposedLatexContent: aiJob.proposedVersion.proposedLatexContent,
     };
+  }
+
+  /**
+   * List all AI jobs for a project
+   * From apis.md Section 6.3
+   * 
+   * Returns all AI tailoring jobs for the project
+   */
+  async listJobsForProject(
+    projectId: string,
+    userId: string,
+  ): Promise<AiJobListItemDto[]> {
+    // Verify project ownership
+    const project = await this.prisma.resumeProject.findUnique({
+      where: { id: projectId },
+    });
+
+    if (!project) {
+      throw new NotFoundException(`Project ${projectId} not found`);
+    }
+
+    if (project.userId !== userId) {
+      throw new ForbiddenException('You do not have access to this project');
+    }
+
+    // Fetch all AI jobs for the project
+    const aiJobs = await this.prisma.aIJob.findMany({
+      where: { projectId },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return aiJobs.map((job) => ({
+      jobId: job.id,
+      projectId: job.projectId,
+      jdId: job.jdId,
+      baseVersionId: job.baseVersionId,
+      status: job.status,
+      createdAt: job.createdAt.toISOString(),
+      updatedAt: job.updatedAt.toISOString(),
+    }));
   }
 }

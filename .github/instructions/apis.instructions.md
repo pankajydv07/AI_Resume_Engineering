@@ -227,6 +227,30 @@ Frontend behavior:
 
 Poll until COMPLETED or FAILED
 
+6.3 List AI Jobs for Project
+GET /ai/jobs/project/{projectId}
+
+Response:
+
+json
+Copy code
+[
+  {
+    "jobId": "uuid",
+    "projectId": "uuid",
+    "jdId": "uuid",
+    "baseVersionId": "uuid",
+    "status": "QUEUED | RUNNING | COMPLETED | FAILED",
+    "createdAt": "timestamp",
+    "updatedAt": "timestamp"
+  }
+]
+Purpose:
+
+View all AI tailoring jobs for a project
+
+Track job history
+
 7. VERSION DIFF APIS
 7.1 Get Version Diff
 GET /versions/diff?from={versionId}&to={versionId}

@@ -37,11 +37,14 @@ export default function ProjectPage() {
   const projectId = params.projectId as string;
 
   const [project, setProject] = useState<ProjectMetadata | null>(null);
+  const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchProjectMetadata();
+    fetchActiveVersion();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   const fetchProjectMetadata = async () => {
@@ -83,6 +86,31 @@ export default function ProjectPage() {
       setError(getErrorMessage(err));
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchActiveVersion = async () => {
+    try {
+      const token = await getToken();
+      
+      if (!token) {
+        return; // Not blocking, just skip
+      }
+
+      const response = await fetch(`http://localhost:3001/api/projects/${projectId}/versions/active`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const version = await response.json();
+        setActiveVersionId(version.versionId);
+      }
+    } catch (err) {
+      // Non-critical: editor can still load manually
+      console.error('Failed to fetch active version:', err);
     }
   };
 
@@ -170,7 +198,7 @@ export default function ProjectPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Editor Link */}
               <Link
-                href={`/projects/${projectId}/editor`}
+                href={activeVersionId ? `/projects/${projectId}/editor?versionId=${activeVersionId}` : `/projects/${projectId}/editor`}
                 className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition group"
               >
                 <div className="flex items-center justify-between mb-3">
