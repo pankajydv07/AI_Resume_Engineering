@@ -319,6 +319,10 @@ Response:
 
 File stream or signed URL
 
+Compilation is synchronous
+
+PDF retrieved via pdfUrl
+
 9. ERROR RESPONSE FORMAT (GLOBAL)
 All error responses must follow:
 

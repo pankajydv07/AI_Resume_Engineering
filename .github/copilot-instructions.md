@@ -139,6 +139,49 @@ VERY IMPORTANT
 
 You are allowed to leave functionality incomplete if contracts require it.
 
+
+## Phase 8: Compilation & Output (STRICT)
+
+Phase 8 is OUTPUT only. No intelligence, no redesign.
+
+### Compilation Rules
+- Compiler: pdflatex only
+- Execution: synchronous
+- Timeout required
+- No background jobs
+- No queues
+- No async polling
+- No new APIs
+
+### Storage Rules
+- Storage provider: Cloudinary
+- Upload type: raw
+- Store only pdfUrl in database
+- Never store files in DB
+- Never overwrite an existing PDF
+
+### Immutability Rules
+- Compilation NEVER creates versions
+- Compilation NEVER edits latexContent
+- Compilation ONLY updates:
+  - pdfUrl
+  - status (DRAFT → COMPILED | ERROR)
+
+### Re-compilation Policy
+- If version.status === COMPILED → return success
+- To recompile, user must create a NEW version
+
+### Forbidden Actions
+❌ Adding compile job tables  
+❌ Making compilation async  
+❌ Introducing queues or workers  
+❌ Mutating existing versions  
+❌ Adding endpoints not in apis.md  
+
+If any decision is unclear → STOP and ask.
+
+
+
 5. TECH STACK (FROZEN)
 Frontend: Next.js (App Router), TypeScript, Tailwind, Clerk
 
