@@ -6,6 +6,7 @@ import {
   SaveResumeEditResponseDto,
   CompileResumeResponseDto,
   VersionDiffDto,
+  VersionListItemDto,
 } from './dto/version.dto';
 
 /**
@@ -95,6 +96,11 @@ export class VersionsService {
    * - Creates NEW version with type=MANUAL
    * - Sets parentVersionId to track lineage
    * - NEVER mutates existing version (immutability rule)
+   * 
+   * CRITICAL FIX: ACTIVE status transfer
+   * - New version becomes ACTIVE
+   * - Old ACTIVE version becomes DRAFT
+   * - Ensures only ONE ACTIVE version per project
    */
   async saveEdit(
     versionId: string,
@@ -115,20 +121,36 @@ export class VersionsService {
       throw new ForbiddenException('You do not have access to this version');
     }
 
-    // Create new MANUAL version with parentVersionId
-    const newVersion = await this.prisma.resumeVersion.create({
-      data: {
-        projectId: parentVersion.projectId,
-        parentVersionId: versionId,
-        type: 'MANUAL',
-        status: 'DRAFT',
-        latexContent: saveEditDto.latexContent,
-        pdfUrl: null,
-      },
+    // CRITICAL: Use transaction to atomically transfer ACTIVE status
+    const result = await this.prisma.$transaction(async (tx) => {
+      // Step 1: Demote current ACTIVE version to DRAFT
+      await tx.resumeVersion.updateMany({
+        where: {
+          projectId: parentVersion.projectId,
+          status: 'ACTIVE',
+        },
+        data: {
+          status: 'DRAFT',
+        },
+      });
+
+      // Step 2: Create new MANUAL version with ACTIVE status
+      const newVersion = await tx.resumeVersion.create({
+        data: {
+          projectId: parentVersion.projectId,
+          parentVersionId: versionId,
+          type: 'MANUAL',
+          status: 'ACTIVE', // New version is now ACTIVE
+          latexContent: saveEditDto.latexContent,
+          pdfUrl: null,
+        },
+      });
+
+      return newVersion;
     });
 
     return {
-      newVersionId: newVersion.id,
+      newVersionId: result.id,
     };
   }
 
@@ -278,8 +300,11 @@ export class VersionsService {
    * Get active version for a project
    * PHASE 2: Critical for editor loading
    * 
-   * Returns the LATEST version for a project (most recently created)
+   * Returns the ACTIVE version for a project
    * Used by frontend to load editor after project creation
+   * 
+   * CRITICAL FIX: Now looks for ACTIVE status (not just latest)
+   * Falls back to latest if no ACTIVE version exists (shouldn't happen)
    */
   async getActiveVersionForProject(projectId: string, userId: string): Promise<ResumeVersionDto> {
     // Verify project ownership first
@@ -295,28 +320,79 @@ export class VersionsService {
       throw new ForbiddenException('You do not have access to this project');
     }
 
-    // Find the LATEST version (most recently created)
+    // Find the ACTIVE version
     const version = await this.prisma.resumeVersion.findFirst({
       where: {
         projectId,
-      },
-      orderBy: {
-        createdAt: 'desc', // Most recent version
+        status: 'ACTIVE',
       },
     });
 
-    if (!version) {
+    // Fallback to latest if no ACTIVE version (shouldn't happen, but defensive)
+    const fallbackVersion = !version ? await this.prisma.resumeVersion.findFirst({
+      where: { projectId },
+      orderBy: { createdAt: 'desc' },
+    }) : null;
+
+    const finalVersion = version || fallbackVersion;
+
+    if (!finalVersion) {
       throw new NotFoundException(`No versions found for project ${projectId}`);
     }
 
     return {
+      versionId: finalVersion.id,
+      projectId: finalVersion.projectId,
+      type: finalVersion.type,
+      status: finalVersion.status,
+      latexContent: finalVersion.latexContent,
+      pdfUrl: finalVersion.pdfUrl,
+      createdAt: finalVersion.createdAt.toISOString(),
+    };
+  }
+
+  /**
+   * List all versions for a project
+   * From apis.md Section 4.4
+   * 
+   * Returns all versions ordered by creation date (newest first)
+   * Used for version selector dropdown and version history
+   */
+  async listVersionsForProject(projectId: string, userId: string): Promise<VersionListItemDto[]> {
+    // Verify project ownership first
+    const project = await this.prisma.resumeProject.findUnique({
+      where: { id: projectId },
+    });
+
+    if (!project) {
+      throw new NotFoundException(`Project ${projectId} not found`);
+    }
+
+    if (project.userId !== userId) {
+      throw new ForbiddenException('You do not have access to this project');
+    }
+
+    // Fetch all versions for the project
+    const versions = await this.prisma.resumeVersion.findMany({
+      where: { projectId },
+      orderBy: { createdAt: 'desc' }, // Newest first
+      select: {
+        id: true,
+        projectId: true,
+        type: true,
+        status: true,
+        createdAt: true,
+        parentVersionId: true,
+      },
+    });
+
+    return versions.map(version => ({
       versionId: version.id,
       projectId: version.projectId,
       type: version.type,
       status: version.status,
-      latexContent: version.latexContent,
-      pdfUrl: version.pdfUrl,
       createdAt: version.createdAt.toISOString(),
-    };
+      parentVersionId: version.parentVersionId,
+    }));
   }
 }

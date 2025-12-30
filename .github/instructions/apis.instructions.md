@@ -129,6 +129,35 @@ Copy code
   "status": "success | error",
   "errors": []
 }
+
+## 4.4 List Versions for Project
+
+GET /versions/project/{projectId}
+
+Response:
+```json
+[
+  {
+    "versionId": "uuid",
+    "projectId": "uuid",
+    "type": "BASE | MANUAL | AI_GENERATED",
+    "status": "DRAFT | COMPILED | ERROR | ACTIVE",
+    "createdAt": "timestamp",
+    "parentVersionId": "uuid | null"
+  }
+]
+```
+
+Purpose:
+- Enable version selector dropdown
+- Show version history
+- Display version tree
+
+Rules:
+- Returns all versions for the project
+- Ordered by createdAt descending (newest first)
+- Ownership verified via project relationship
+
 5. JOB DESCRIPTION APIS
 5.1 Submit Job Description
 POST /jd

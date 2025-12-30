@@ -403,20 +403,39 @@ Please generate an optimized version of this resume tailored for the above job d
       throw new BadRequestException('Job is not completed yet');
     }
 
-    // Create new AI_GENERATED version
-    const newVersion = await this.prisma.resumeVersion.create({
-      data: {
-        projectId: acceptProposalDto.projectId,
-        parentVersionId: aiJob.baseVersionId,
-        type: 'AI_GENERATED',
-        status: 'DRAFT',
-        latexContent: aiJob.proposedVersion.proposedLatexContent,
-      },
-    });
+    // CRITICAL FIX: Use transaction to atomically transfer ACTIVE status
+    // - Demote current ACTIVE version to DRAFT
+    // - Create new AI_GENERATED version as ACTIVE
+    // - Delete proposal
+    const newVersion = await this.prisma.$transaction(async (tx) => {
+      // Step 1: Demote current ACTIVE version to DRAFT
+      await tx.resumeVersion.updateMany({
+        where: {
+          projectId: acceptProposalDto.projectId,
+          status: 'ACTIVE',
+        },
+        data: {
+          status: 'DRAFT',
+        },
+      });
 
-    // Delete the proposal (cleanup)
-    await this.prisma.proposedVersion.delete({
-      where: { id: aiJob.proposedVersion.id },
+      // Step 2: Create new AI_GENERATED version with ACTIVE status
+      const version = await tx.resumeVersion.create({
+        data: {
+          projectId: acceptProposalDto.projectId,
+          parentVersionId: aiJob.baseVersionId,
+          type: 'AI_GENERATED',
+          status: 'ACTIVE', // New version is now ACTIVE
+          latexContent: aiJob.proposedVersion.proposedLatexContent,
+        },
+      });
+
+      // Step 3: Delete the proposal (cleanup)
+      await tx.proposedVersion.delete({
+        where: { id: aiJob.proposedVersion.id },
+      });
+
+      return version;
     });
 
     return {

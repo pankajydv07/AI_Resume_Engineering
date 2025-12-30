@@ -1,8 +1,12 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+import { useAuth } from '@clerk/nextjs';
+import { handleHttpError, getErrorMessage } from '@/lib/errorHandling';
+
 /**
  * PHASE 3: Version Selector Component
- * PHASE 7: Fully functional with version dropdown
+ * PHASE 10: Fully functional with version dropdown
  * 
  * WHY VERSION SWITCHING EXISTS:
  * Users need to compare and revert to previous resume states. This component enforces
@@ -16,8 +20,11 @@
 
 interface Version {
   versionId: string;
+  projectId: string;
   type: 'BASE' | 'MANUAL' | 'AI_GENERATED';
+  status: 'DRAFT' | 'COMPILED' | 'ERROR' | 'ACTIVE';
   createdAt: string;
+  parentVersionId: string | null;
 }
 
 interface VersionSelectorProps {
@@ -33,11 +40,59 @@ export function VersionSelector({
   onVersionSwitch,
   isDirty,
 }: VersionSelectorProps) {
-  // PHASE 7: Version listing functional - shows current version only for simplicity
-  // FUTURE ENHANCEMENT: Add dropdown with full version history
-  // Current approach: Users rely on manual version IDs for switching (advanced users only)
-  
+  const { getToken } = useAuth();
+  const [versions, setVersions] = useState<Version[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  // Fetch versions on mount, when projectId changes, or when currentVersionId changes
+  // This ensures the list updates after saving (which creates a new version)
+  useEffect(() => {
+    if (projectId) {
+      fetchVersions();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, currentVersionId]);
+
+  const fetchVersions = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const token = await getToken();
+      
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
+      const response = await fetch(`http://localhost:3001/api/versions/project/${projectId}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorInfo = await handleHttpError(response);
+        throw errorInfo;
+      }
+
+      const data: Version[] = await response.json();
+      setVersions(data);
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSwitch = async (versionId: string) => {
+    if (versionId === currentVersionId) {
+      setIsDropdownOpen(false);
+      return;
+    }
+
     if (isDirty) {
       const confirmed = window.confirm(
         'You have unsaved changes. Switching versions will discard them. Continue?'
@@ -45,33 +100,85 @@ export function VersionSelector({
       if (!confirmed) return;
     }
 
+    setIsDropdownOpen(false);
     await onVersionSwitch(versionId);
   };
+
+  const formatVersionLabel = (version: Version): string => {
+    const typeLabels = {
+      BASE: '🏠 Base',
+      MANUAL: '✏️ Manual',
+      AI_GENERATED: '🤖 AI',
+    };
+
+    const statusBadge = version.status === 'ACTIVE' ? ' (Active)' : '';
+    const date = new Date(version.createdAt).toLocaleString([], {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    return `${typeLabels[version.type]} - ${date}${statusBadge}`;
+  };
+
+  const currentVersion = versions.find(v => v.versionId === currentVersionId);
 
   return (
     <div className="px-4 py-3 border-b border-gray-200 bg-white">
       <label className="block text-xs font-medium text-gray-700 mb-2">
-        Current Version
+        Version Selector
       </label>
       
+      {error && (
+        <div className="mb-2 text-xs text-red-600">
+          Failed to load versions: {error}
+        </div>
+      )}
+
       {currentVersionId ? (
-        <div className="flex items-center gap-2">
-          <div className="flex-1 px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded">
-            <span className="font-mono text-xs text-gray-600">
-              {currentVersionId.substring(0, 8)}...
-            </span>
-          </div>
-          
-          {/* PHASE 7: Version display only - no dropdown yet */}
-          {/* FUTURE: Add dropdown with version history for easier switching */}
+        <div className="relative">
           <button
             type="button"
-            disabled
-            className="px-3 py-2 text-xs font-medium text-gray-400 bg-gray-100 rounded cursor-not-allowed"
-            title="Version switching UI pending version list API"
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            disabled={isLoading || versions.length === 0}
+            className="w-full flex items-center justify-between px-3 py-2 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
           >
-            Switch
+            <span className="text-left">
+              {currentVersion ? formatVersionLabel(currentVersion) : 'Loading...'}
+            </span>
+            <svg
+              className={`w-4 h-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
           </button>
+
+          {isDropdownOpen && versions.length > 0 && (
+            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+              {versions.map((version) => (
+                <button
+                  key={version.versionId}
+                  type="button"
+                  onClick={() => handleSwitch(version.versionId)}
+                  className={`w-full text-left px-3 py-2 text-sm hover:bg-blue-50 ${
+                    version.versionId === currentVersionId
+                      ? 'bg-blue-100 font-medium'
+                      : ''
+                  }`}
+                >
+                  {formatVersionLabel(version)}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="mt-1 text-xs text-gray-500">
+            {versions.length} version{versions.length !== 1 ? 's' : ''} available
+          </div>
         </div>
       ) : (
         <div className="text-sm text-gray-500 italic">

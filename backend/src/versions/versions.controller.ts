@@ -9,6 +9,7 @@ import {
   SaveResumeEditResponseDto,
   CompileResumeResponseDto,
   VersionDiffDto,
+  VersionListItemDto,
 } from './dto/version.dto';
 
 /**
@@ -26,6 +27,25 @@ import {
 @UseGuards(ClerkAuthGuard)
 export class VersionsController {
   constructor(private readonly versionsService: VersionsService) {}
+
+  /**
+   * GET /api/versions/project/:projectId
+   * List all versions for a project
+   * From apis.md Section 4.4
+   * 
+   * CRITICAL: This MUST be defined BEFORE versions/:versionId route
+   * to avoid route collision (NestJS matches routes in order)
+   * 
+   * Returns all versions ordered by creation date (newest first)
+   * Used for version selector dropdown and version history
+   */
+  @Get('project/:projectId')
+  async listVersionsForProject(
+    @Param('projectId') projectId: string,
+    @CurrentUser() userId: string,
+  ): Promise<VersionListItemDto[]> {
+    return this.versionsService.listVersionsForProject(projectId, userId);
+  }
 
   /**
    * GET /api/versions/:versionId

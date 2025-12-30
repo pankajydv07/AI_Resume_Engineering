@@ -49,3 +49,16 @@ export class VersionDiffDto {
   removed: string[];
   rewritten: Array<{ before: string; after: string }>;
 }
+
+/**
+ * DTO for listing versions (compact version without latexContent)
+ * From apis.md Section 4.4
+ */
+export class VersionListItemDto {
+  versionId: string;
+  projectId: string;
+  type: 'BASE' | 'MANUAL' | 'AI_GENERATED';
+  status: 'DRAFT' | 'COMPILED' | 'ERROR' | 'ACTIVE';
+  createdAt: string;
+  parentVersionId: string | null;
+}
