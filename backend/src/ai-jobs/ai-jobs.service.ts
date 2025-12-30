@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { StartAiTailoringDto, StartAiTailoringResponseDto, AiJobStatusDto, AiJobListItemDto } from './dto/ai-job.dto';
+import OpenAI from 'openai';
 
 /**
  * AI Jobs Service
@@ -14,7 +15,15 @@ import { StartAiTailoringDto, StartAiTailoringResponseDto, AiJobStatusDto, AiJob
  */
 @Injectable()
 export class AiJobsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly aiClient: OpenAI;
+
+  constructor(private readonly prisma: PrismaService) {
+    // Initialize Nebius AI client
+    this.aiClient = new OpenAI({
+      baseURL: 'https://api.tokenfactory.nebius.com/v1/',
+      apiKey: process.env.NEBIUS_API_KEY,
+    });
+  }
   /**
    * Start AI tailoring job
    * From apis.md Section 6.1
@@ -177,36 +186,135 @@ export class AiJobsService {
 
   /**
    * Generate proposed resume content
-   * PHASE 6: PLACEHOLDER IMPLEMENTATION
+   * PHASE 9: REAL AI IMPLEMENTATION (Nebius AI)
    * 
-   * TODO: Replace with actual AI service call
-   * - OpenAI API
-   * - Claude API
-   * - Custom LLM
-   * 
-   * Current: Simple text concatenation for testing
+   * Uses Nebius AI API (OpenAI-compatible) to tailor resume
+   * Based on job description and optimization mode
    */
   private async generateProposedResume(
     baseLatexContent: string,
     jdRawText: string,
     mode: string,
   ): Promise<string> {
-    // TODO: Implement actual AI resume tailoring logic
-    // For now, return modified content with a marker
-    
-    const proposal = `${baseLatexContent}
+    try {
+      // Build mode-specific instructions
+      const modeInstructions = this.getModeInstructions(mode);
 
-% ========================================
-% AI-GENERATED PROPOSAL (PHASE 6)
-% ========================================
-% Mode: ${mode}
-% Based on JD: ${jdRawText.substring(0, 100)}...
-% 
-% TODO: Replace this placeholder with actual AI-generated content
-% ========================================
-`;
+      // System prompt: Define AI behavior and constraints
+      const systemPrompt = `You are an expert resume optimization assistant specializing in LaTeX resume tailoring.
 
-    return proposal;
+Your task:
+- Analyze the provided job description
+- Modify the LaTeX resume to align with the job requirements
+- Preserve ALL LaTeX structure, formatting, and commands
+- Only modify content (text within LaTeX commands), NEVER change LaTeX syntax
+- Focus on: relevant skills, experience framing, keyword optimization
+
+Constraints:
+- Output ONLY valid LaTeX code
+- Do NOT add explanations or markdown
+- Do NOT change document class, packages, or formatting
+- Do NOT invent experience or skills
+- Do NOT remove sections entirely
+
+${modeInstructions}`;
+
+      // User prompt: Provide context and specific request
+      const userPrompt = `Base Resume (LaTeX):
+\`\`\`latex
+${baseLatexContent}
+\`\`\`
+
+Job Description:
+\`\`\`
+${jdRawText}
+\`\`\`
+
+Please generate an optimized version of this resume tailored for the above job description. Return ONLY the complete LaTeX code.`;
+
+      // Call Nebius AI API
+      const response = await this.aiClient.chat.completions.create({
+        model: 'openai/gpt-oss-20b',
+        messages: [
+          {
+            role: 'system',
+            content: systemPrompt,
+          },
+          {
+            role: 'user',
+            content: userPrompt,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 4000,
+      });
+
+      // Extract generated content
+      const proposedLatexContent = response.choices[0]?.message?.content;
+
+      if (!proposedLatexContent) {
+        throw new Error('AI service returned empty response');
+      }
+
+      // Clean up response (remove markdown code blocks if present)
+      const cleanedContent = this.cleanAIResponse(proposedLatexContent);
+
+      return cleanedContent;
+    } catch (error) {
+      // Log error details
+      console.error('AI resume generation failed:', error);
+
+      // Re-throw with user-friendly message
+      throw new Error(
+        `Failed to generate AI proposal: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+    }
+  }
+
+  /**
+   * Get mode-specific instructions for AI
+   */
+  private getModeInstructions(mode: string): string {
+    switch (mode) {
+      case 'MINIMAL':
+        return `Optimization Level: MINIMAL
+- Make only small, targeted changes
+- Focus on keyword alignment
+- Preserve original phrasing as much as possible
+- Change only 10-20% of content`;
+
+      case 'BALANCED':
+        return `Optimization Level: BALANCED
+- Moderate content rewriting
+- Reframe bullet points to match job requirements
+- Add relevant technical keywords
+- Change 30-50% of content`;
+
+      case 'AGGRESSIVE':
+        return `Optimization Level: AGGRESSIVE
+- Extensive content optimization
+- Rewrite most descriptions to align with JD
+- Maximize keyword density
+- Reorder sections if beneficial
+- Change 50-70% of content`;
+
+      default:
+        return 'Optimization Level: BALANCED';
+    }
+  }
+
+  /**
+   * Clean AI response to extract pure LaTeX
+   * Removes markdown code blocks and extra formatting
+   */
+  private cleanAIResponse(response: string): string {
+    // Remove markdown code blocks
+    let cleaned = response.replace(/```latex\n?/g, '').replace(/```\n?/g, '');
+
+    // Remove leading/trailing whitespace
+    cleaned = cleaned.trim();
+
+    return cleaned;
   }
 
   /**
