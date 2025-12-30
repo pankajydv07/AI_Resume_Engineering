@@ -40,7 +40,7 @@ interface EditorState {
   currentVersion: ResumeVersion | null;
 }
 
-export function useEditorState(projectId: string) {
+export function useEditorState(projectId: string, getToken: () => Promise<string | null>) {
   const [state, setState] = useState<EditorState>({
     currentVersionId: null,
     latexDraft: '',
@@ -58,11 +58,17 @@ export function useEditorState(projectId: string) {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      // TODO: Replace with real Clerk token when auth is implemented
+      // PHASE 8: Real Clerk JWT authentication
+      const token = await getToken();
+      
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
       const response = await fetch(`http://localhost:3001/api/versions/${versionId}`, {
         headers: {
           'Content-Type': 'application/json',
-          // FUTURE PHASE 8: Add Authorization header with Clerk JWT
+          'Authorization': `Bearer ${token}`,
         },
       });
 
@@ -125,58 +131,31 @@ export function useEditorState(projectId: string) {
   }, [loadVersion]);
 
   /**
-   * PHASE 7.3: Load latest version for project
-   * Fetches all versions and loads the most recent one
-   * Safe for refresh scenarios
+   * @deprecated NO LONGER USED - REMOVED NON-EXISTENT API CALL
+   * 
+   * PREVIOUS IMPLEMENTATION ATTEMPTED TO CALL:
+   *   GET /api/versions/project/:projectId
+   * 
+   * This endpoint does NOT exist in apis.md and violates the contract.
+   * 
+   * NEW FLOW (FIXED):
+   * - Dashboard passes baseVersionId via URL: /editor?versionId=xxx
+   * - Editor reads versionId from URL params
+   * - Editor calls existing endpoint: GET /api/versions/:versionId
+   * 
+   * This function is kept for compatibility but should not be called.
    */
   const loadLatestVersion = useCallback(async () => {
-    setState(prev => ({ ...prev, isLoading: true, error: null }));
-
-    try {
-      // Fetch all versions for this project
-      const response = await fetch(`http://localhost:3001/api/versions/project/${projectId}`, {
-        headers: {
-          'Content-Type': 'application/json',
-          // FUTURE PHASE 8: Add Authorization header with Clerk JWT
-        },
-      });
-
-      if (!response.ok) {
-        const errorInfo = await handleHttpError(response);
-        throw errorInfo;
-      }
-
-      const versions: ResumeVersion[] = await response.json();
-
-      // If no versions exist, show empty state (not an error)
-      if (versions.length === 0) {
-        setState({
-          currentVersionId: null,
-          latexDraft: '',
-          isDirty: false,
-          isLoading: false,
-          error: null,
-          currentVersion: null,
-        });
-        return;
-      }
-
-      // Sort by createdAt descending and load the most recent
-      const sortedVersions = [...versions].sort((a, b) => 
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-      const latestVersion = sortedVersions[0];
-
-      // Load the latest version
-      await loadVersion(latestVersion.versionId);
-    } catch (err) {
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        error: getErrorMessage(err),
-      }));
-    }
-  }, [projectId, loadVersion]);
+    console.warn('loadLatestVersion is deprecated and should not be called');
+    setState({
+      currentVersionId: null,
+      latexDraft: '',
+      isDirty: false,
+      isLoading: false,
+      error: 'No version specified. Please select a version from the dashboard.',
+      currentVersion: null,
+    });
+  }, []);
 
   /**
    * Save manual edit
@@ -191,14 +170,18 @@ export function useEditorState(projectId: string) {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      // FUTURE PHASE 8: Replace with real Clerk JWT token
-      // Currently: Backend accepts any bearer token for development
-      // Production: Must validate Clerk JWT signature and claims
+      // PHASE 8: Real Clerk JWT authentication
+      const token = await getToken();
+      
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
       const response = await fetch(`http://localhost:3001/api/versions/${state.currentVersionId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          // TODO: Add Authorization header with Clerk JWT
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           latexContent: state.latexDraft,

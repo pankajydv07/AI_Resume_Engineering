@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
 import Link from 'next/link';
 import { handleHttpError, getErrorMessage } from '@/lib/errorHandling';
 
@@ -32,6 +33,7 @@ interface ProjectMetadata {
 
 export default function ProjectPage() {
   const params = useParams();
+  const { getToken } = useAuth();
   const projectId = params.projectId as string;
 
   const [project, setProject] = useState<ProjectMetadata | null>(null);
@@ -47,12 +49,17 @@ export default function ProjectPage() {
     setError(null);
 
     try {
-      // FUTURE PHASE 8: Add Clerk authentication token
-      // Currently using mock auth for development - backend validates format but not signature
+      // PHASE 8: Real Clerk JWT authentication
+      const token = await getToken();
+      
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
       const response = await fetch('http://localhost:3001/api/projects', {
         headers: {
           'Content-Type': 'application/json',
-          // TODO: Add Authorization header with Clerk JWT
+          'Authorization': `Bearer ${token}`,
         },
       });
 

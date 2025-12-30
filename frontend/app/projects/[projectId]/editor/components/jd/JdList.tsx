@@ -30,9 +30,10 @@ interface JdListProps {
   selectedJdId: string | null;
   onJdSelected: (jdId: string) => void;
   refreshTrigger?: number; // External trigger to refresh list
+  getToken: () => Promise<string | null>;
 }
 
-export function JdList({ projectId, selectedJdId, onJdSelected, refreshTrigger }: JdListProps) {
+export function JdList({ projectId, selectedJdId, onJdSelected, refreshTrigger, getToken }: JdListProps) {
   const [jds, setJds] = useState<JobDescription[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,11 +43,17 @@ export function JdList({ projectId, selectedJdId, onJdSelected, refreshTrigger }
     setError(null);
 
     try {
-      // FUTURE PHASE 8: Add Clerk JWT authentication
+      // PHASE 8: Real Clerk JWT authentication
+      const token = await getToken();
+      
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
       const response = await fetch(`http://localhost:3001/api/jd/project/${projectId}`, {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer mock-token-user-123',
+          'Authorization': `Bearer ${token}`,
         },
       });
 

@@ -30,6 +30,7 @@ interface ProposalActionsProps {
   baseVersionId: string;
   onAccepted: (newVersionId: string) => void;
   onRejected: () => void;
+  getToken: () => Promise<string | null>;
 }
 
 export function ProposalActions({
@@ -38,6 +39,7 @@ export function ProposalActions({
   baseVersionId,
   onAccepted,
   onRejected,
+  getToken,
 }: ProposalActionsProps) {
   const [isAccepting, setIsAccepting] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
@@ -48,12 +50,18 @@ export function ProposalActions({
     setError(null);
 
     try {
-      // FUTURE PHASE 8: Add Clerk JWT authentication
+      // PHASE 8: Real Clerk JWT authentication
+      const token = await getToken();
+      
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
       const response = await fetch('http://localhost:3001/api/ai/proposal/accept', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer mock-token-user-123',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           aiJobId,
@@ -81,12 +89,18 @@ export function ProposalActions({
     setError(null);
 
     try {
-      // FUTURE PHASE 8: Add Clerk JWT authentication
+      // PHASE 8: Real Clerk JWT authentication
+      const token = await getToken();
+      
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
       const response = await fetch('http://localhost:3001/api/ai/proposal/reject', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer mock-token-user-123',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           aiJobId,

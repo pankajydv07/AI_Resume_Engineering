@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { UserButton } from "@clerk/nextjs";
+import { UserButton, useAuth } from "@clerk/nextjs";
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { handleHttpError, getErrorMessage, isRetryableError } from '@/lib/errorHandling';
@@ -37,6 +37,7 @@ interface ProjectListItem {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { getToken } = useAuth();
   const [projects, setProjects] = useState<ProjectListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,12 +58,17 @@ export default function DashboardPage() {
     setError(null);
 
     try {
-      // FUTURE PHASE 8: Add Clerk authentication token
-      // Currently using mock auth for development - backend validates format but not signature
+      // PHASE 8: Real Clerk JWT authentication
+      const token = await getToken();
+      
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
       const response = await fetch('http://localhost:3001/api/projects', {
         headers: {
           'Content-Type': 'application/json',
-          // FUTURE PHASE 8: Add Authorization header with Clerk JWT
+          'Authorization': `Bearer ${token}`,
         },
       });
 
@@ -97,13 +103,18 @@ export default function DashboardPage() {
     setCreateError(null);
 
     try {
-      // FUTURE PHASE 8: Add Clerk authentication token  
-      // Currently using mock auth for development - backend validates format but not signature
+      // PHASE 8: Real Clerk JWT authentication
+      const token = await getToken();
+      
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
       const response = await fetch('http://localhost:3001/api/projects', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // FUTURE PHASE 8: Add Authorization header with Clerk JWT
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           name: projectName.trim(),
@@ -116,8 +127,8 @@ export default function DashboardPage() {
 
       const result = await response.json();
       
-      // Redirect directly to the editor for the new project
-      router.push(`/projects/${result.projectId}/editor`);
+      // FIXED: Navigate to project page (NOT editor) - user must select version explicitly
+      router.push(`/projects/${result.projectId}`);
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : 'Unknown error');
       setIsCreating(false);

@@ -36,6 +36,7 @@ interface AiJobButtonProps {
   selectedJdId: string | null;
   baseLatexContent: string;
   onVersionChange: (newVersionId: string) => void;
+  getToken: () => Promise<string | null>;
 }
 
 export function AiJobButton({ 
@@ -44,6 +45,7 @@ export function AiJobButton({
   selectedJdId,
   baseLatexContent,
   onVersionChange,
+  getToken,
 }: AiJobButtonProps) {
   const [jobId, setJobId] = useState<string | null>(null);
   const [status, setStatus] = useState<'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED' | null>(null);
@@ -74,12 +76,18 @@ export function AiJobButton({
     setErrorMessage(null);
 
     try {
-      // FUTURE PHASE 8: Add Clerk JWT authentication
+      // PHASE 8: Real Clerk JWT authentication
+      const token = await getToken();
+      
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
       const response = await fetch('http://localhost:3001/api/ai/tailor', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer mock-token-user-123',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           projectId,
@@ -114,10 +122,18 @@ export function AiJobButton({
 
     const poll = async () => {
       try {
+        const token = await getToken();
+        
+        if (!token) {
+          setIsPolling(false);
+          setErrorMessage('Not authenticated');
+          return;
+        }
+
         const response = await fetch(`http://localhost:3001/api/ai/jobs/${id}`, {
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer mock-token-user-123',
+            'Authorization': `Bearer ${token}`,
           },
         });
 
@@ -307,6 +323,7 @@ export function AiJobButton({
           onAccepted={handleProposalAccepted}
           onRejected={handleProposalRejected}
           onClose={() => setShowProposal(false)}
+          getToken={getToken}
         />
       )}
     </div>

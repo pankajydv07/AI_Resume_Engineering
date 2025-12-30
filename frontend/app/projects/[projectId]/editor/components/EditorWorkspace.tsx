@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { useEditorState } from '../hooks/useEditorState';
 import { EditorToolbar } from './EditorToolbar';
 import { VersionSelector } from './VersionSelector';
@@ -24,9 +25,11 @@ import { JdPanel } from './jd/JdPanel';
 
 interface EditorWorkspaceProps {
   projectId: string;
+  initialVersionId?: string | null;
 }
 
-export function EditorWorkspace({ projectId }: EditorWorkspaceProps) {
+export function EditorWorkspace({ projectId, initialVersionId }: EditorWorkspaceProps) {
+  const { getToken } = useAuth();
   const {
     currentVersionId,
     latexDraft,
@@ -39,7 +42,7 @@ export function EditorWorkspace({ projectId }: EditorWorkspaceProps) {
     updateDraft,
     switchVersion,
     saveEdit,
-  } = useEditorState(projectId);
+  } = useEditorState(projectId, getToken);
 
   // PHASE 4: JD Panel visibility state (completely separate from editor state)
   const [isJdPanelOpen, setIsJdPanelOpen] = React.useState(false);
@@ -50,11 +53,14 @@ export function EditorWorkspace({ projectId }: EditorWorkspaceProps) {
     });
   };
 
-  // PHASE 7.3: Auto-load latest version on mount
-  // Safe for refresh scenarios - loads most recent version or shows empty state
+  // FIXED: Load version from URL param ONLY if provided
+  // If no versionId, empty state will be shown (no version loaded)
   useEffect(() => {
-    loadLatestVersion();
-  }, [loadLatestVersion]);
+    if (initialVersionId) {
+      loadVersion(initialVersionId);
+    }
+    // If initialVersionId is null/undefined, component shows empty state automatically
+  }, [initialVersionId, loadVersion]);
 
   return (
     <div className="flex flex-col h-screen">
@@ -149,6 +155,7 @@ export function EditorWorkspace({ projectId }: EditorWorkspaceProps) {
               onVersionChange={(newVersionId) => {
                 switchVersion(newVersionId);
               }}
+              getToken={getToken}
             />
           </div>
         )}

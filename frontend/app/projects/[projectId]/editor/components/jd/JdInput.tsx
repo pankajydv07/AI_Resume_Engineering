@@ -19,9 +19,10 @@ import { useState } from 'react';
 interface JdInputProps {
   projectId: string;
   onJdSubmitted?: (jdId: string) => void;
+  getToken: () => Promise<string | null>;
 }
 
-export function JdInput({ projectId, onJdSubmitted }: JdInputProps) {
+export function JdInput({ projectId, onJdSubmitted, getToken }: JdInputProps) {
   const [rawText, setRawText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -36,12 +37,18 @@ export function JdInput({ projectId, onJdSubmitted }: JdInputProps) {
     setError(null);
 
     try {
-      // FUTURE PHASE 8: Add Clerk JWT authentication
+      // PHASE 8: Real Clerk JWT authentication
+      const token = await getToken();
+      
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
       const response = await fetch('http://localhost:3001/api/jd', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer mock-token-user-123',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
           projectId,

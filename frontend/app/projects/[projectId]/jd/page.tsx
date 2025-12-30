@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
 import Link from 'next/link';
 import { handleHttpError, getErrorMessage } from '@/lib/errorHandling';
 
@@ -29,6 +30,7 @@ interface JobDescription {
 
 export default function JobDescriptionsPage() {
   const params = useParams();
+  const { getToken } = useAuth();
   const projectId = params.projectId as string;
 
   const [jds, setJds] = useState<JobDescription[]>([]);
@@ -44,10 +46,17 @@ export default function JobDescriptionsPage() {
     setError(null);
 
     try {
+      // PHASE 8: Real Clerk JWT authentication
+      const token = await getToken();
+      
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
       const response = await fetch(`http://localhost:3001/api/jd/project/${projectId}`, {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer mock-token-user-123',
+          'Authorization': `Bearer ${token}`,
         },
       });
 

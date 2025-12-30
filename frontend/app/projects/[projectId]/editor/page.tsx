@@ -1,23 +1,27 @@
 'use client';
 
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { EditorWorkspace } from './components/EditorWorkspace';
 
 /**
  * PHASE 3: Resume Editor Page
  * PHASE 7.2: Added breadcrumbs for navigation clarity
- * Route: /projects/:projectId/editor
+ * Route: /projects/:projectId/editor?versionId=xxx
  * 
  * Per userflow.md Section 2.5:
  * - Layout: LEFT (LaTeX Editor) | RIGHT (PDF Preview)
  * - Purpose: Manual resume editing, version switching
  * - Allowed: Edit in memory, save manual changes, switch versions
  * - Forbidden: AI auto-run, silent overwrites
+ * 
+ * FIXED: Read versionId from URL search params instead of trying to fetch by projectId
  */
 export default function EditorPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const projectId = params.projectId as string;
+  const versionId = searchParams.get('versionId');
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -37,7 +41,7 @@ export default function EditorPage() {
           </nav>
         </div>
       </div>
-      <EditorWorkspace projectId={projectId} />
+      <EditorWorkspace projectId={projectId} initialVersionId={versionId} />
     </div>
   );
 }

@@ -36,6 +36,7 @@ interface ProposalModalProps {
   onAccepted: (newVersionId: string) => void;
   onRejected: () => void;
   onClose: () => void;
+  getToken: () => Promise<string | null>;
 }
 
 export function ProposalModal({
@@ -46,6 +47,7 @@ export function ProposalModal({
   onAccepted,
   onRejected,
   onClose,
+  getToken,
 }: ProposalModalProps) {
   const [proposedContent, setProposedContent] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -57,11 +59,17 @@ export function ProposalModal({
       setError(null);
 
       try {
-        // FUTURE PHASE 8: Add Clerk JWT authentication  
+        // PHASE 8: Real Clerk JWT authentication
+        const token = await getToken();
+        
+        if (!token) {
+          throw new Error('Not authenticated');
+        }
+
         const response = await fetch(`http://localhost:3001/api/ai/jobs/${aiJobId}/proposal`, {
           method: 'GET',
           headers: {
-            'Authorization': 'Bearer mock-token-user-123',
+            'Authorization': `Bearer ${token}`,
           },
         });
 
@@ -181,6 +189,7 @@ export function ProposalModal({
                   baseVersionId={baseVersionId}
                   onAccepted={handleAccept}
                   onRejected={handleReject}
+                  getToken={getToken}
                 />
               </div>
             </>

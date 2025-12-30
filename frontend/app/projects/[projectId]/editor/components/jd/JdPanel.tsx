@@ -29,9 +29,10 @@ interface JdPanelProps {
   baseVersionId: string | null;
   baseLatexContent: string;
   onVersionChange: (newVersionId: string) => void;
+  getToken: () => Promise<string | null>;
 }
 
-export function JdPanel({ projectId, baseVersionId, baseLatexContent, onVersionChange }: JdPanelProps) {
+export function JdPanel({ projectId, baseVersionId, baseLatexContent, onVersionChange, getToken }: JdPanelProps) {
   const [selectedJdId, setSelectedJdId] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -69,6 +70,7 @@ export function JdPanel({ projectId, baseVersionId, baseLatexContent, onVersionC
         <JdInput 
           projectId={projectId} 
           onJdSubmitted={handleJdSubmitted}
+          getToken={getToken}
         />
 
         {/* JD List */}
@@ -77,6 +79,7 @@ export function JdPanel({ projectId, baseVersionId, baseLatexContent, onVersionC
           selectedJdId={selectedJdId}
           onJdSelected={handleJdSelected}
           refreshTrigger={refreshTrigger}
+          getToken={getToken}
         />
 
         {/* PHASE 7.2: AI Tailoring Section Header */}
@@ -94,6 +97,7 @@ export function JdPanel({ projectId, baseVersionId, baseLatexContent, onVersionC
             selectedJdId={selectedJdId}
             baseLatexContent={baseLatexContent}
             onVersionChange={onVersionChange}
+            getToken={getToken}
           />
         </div>
       </div>
