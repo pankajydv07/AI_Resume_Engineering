@@ -2,6 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { useAuth } from '@clerk/nextjs';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useEditorState } from '../hooks/useEditorState';
 import { EditorToolbar } from './EditorToolbar';
 import { VersionSelector } from './VersionSelector';
@@ -30,6 +31,8 @@ interface EditorWorkspaceProps {
 
 export function EditorWorkspace({ projectId, initialVersionId }: EditorWorkspaceProps) {
   const { getToken } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const {
     currentVersionId,
     latexDraft,
@@ -47,10 +50,25 @@ export function EditorWorkspace({ projectId, initialVersionId }: EditorWorkspace
   // PHASE 4: JD Panel visibility state (completely separate from editor state)
   const [isJdPanelOpen, setIsJdPanelOpen] = React.useState(false);
 
+  // Update URL when version changes
+  const updateUrlWithVersion = (versionId: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('versionId', versionId);
+    router.replace(`/projects/${projectId}/editor?${params.toString()}`, { scroll: false });
+  };
+
   const handleSave = async () => {
     await saveEdit((newVersionId) => {
       console.log('Save successful, new version:', newVersionId);
+      // Update URL to reflect new version
+      updateUrlWithVersion(newVersionId);
     });
+  };
+
+  const handleVersionSwitch = async (versionId: string) => {
+    await switchVersion(versionId);
+    // Update URL to reflect switched version
+    updateUrlWithVersion(versionId);
   };
 
   // FIXED: Load version from URL param ONLY if provided
@@ -87,7 +105,7 @@ export function EditorWorkspace({ projectId, initialVersionId }: EditorWorkspace
       <VersionSelector
         currentVersionId={currentVersionId}
         projectId={projectId}
-        onVersionSwitch={switchVersion}
+        onVersionSwitch={handleVersionSwitch}
         isDirty={isDirty}
       />
 
