@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { apiUrl } from '@/lib/api';
 
 /**
  * PHASE 4: JD List Component
@@ -50,7 +51,7 @@ export function JdList({ projectId, selectedJdId, onJdSelected, refreshTrigger, 
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch(`http://localhost:3001/api/jd/project/${projectId}`, {
+      const response = await fetch(apiUrl(`/api/jd/project/${projectId}`), {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,

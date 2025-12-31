@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { handleHttpError, getErrorMessage } from '@/lib/errorHandling';
+import { apiUrl } from '@/lib/api';
 
 /**
  * PHASE 3: Editor State Management Hook
@@ -65,7 +66,7 @@ export function useEditorState(projectId: string, getToken: () => Promise<string
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch(`http://localhost:3001/api/versions/${versionId}`, {
+      const response = await fetch(apiUrl(`/api/versions/${versionId}`), {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
@@ -177,7 +178,7 @@ export function useEditorState(projectId: string, getToken: () => Promise<string
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch(`http://localhost:3001/api/versions/${state.currentVersionId}`, {
+      const response = await fetch(apiUrl(`/api/versions/${state.currentVersionId}`), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -240,7 +241,7 @@ export function useEditorState(projectId: string, getToken: () => Promise<string
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch(`http://localhost:3001/api/versions/${state.currentVersionId}/compile`, {
+      const response = await fetch(apiUrl(`/api/versions/${state.currentVersionId}/compile`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

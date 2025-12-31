@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { v2 as cloudinary } from 'cloudinary';
 import * as fs from 'fs';
@@ -489,13 +489,12 @@ export class VersionsService {
    * Download PDF version
    * From apis.md Section 8.1
    * 
-   * PHASE 2: Placeholder with ownership verification (security stub)
-   * TODO: PHASE 4 - Implement file download
-   * TODO: PHASE 4 - Return signed S3 URL or file stream
-   * TODO: PHASE 4 - Verify version is COMPILED
+   * PHASE 8: Complete implementation
+   * - Returns Cloudinary PDF URL (no recompilation)
+   * - Requires version status === COMPILED
+   * - Ownership verified
    */
   async downloadPdf(versionId: string, userId: string): Promise<string> {
-    // PHASE 2 HARDENING: Verify ownership even in placeholder
     const version = await this.prisma.resumeVersion.findUnique({
       where: { id: versionId },
       include: { project: true },
@@ -509,21 +508,30 @@ export class VersionsService {
       throw new ForbiddenException('You do not have access to this version');
     }
 
-    // TODO: PHASE 4 - Real file download logic
-    // For now, return placeholder
-    return 'https://placeholder-pdf-url.com/resume.pdf';
+    // Verify version is compiled
+    if (version.status !== 'COMPILED') {
+      throw new BadRequestException('Version must be compiled before downloading PDF');
+    }
+
+    // Verify PDF exists
+    if (!version.pdfUrl) {
+      throw new NotFoundException('PDF not found for this version');
+    }
+
+    // Return Cloudinary URL (already public, no recompilation needed)
+    return version.pdfUrl;
   }
 
   /**
    * Download LaTeX source
    * From apis.md Section 8.2
    * 
-   * PHASE 2: Placeholder with ownership verification (security stub)
-   * TODO: PHASE 4 - Implement file download
-   * TODO: PHASE 4 - Return LaTeX content as file
+   * PHASE 8: Complete implementation
+   * - Returns LaTeX content from database
+   * - No compilation required
+   * - Ownership verified
    */
   async downloadLatex(versionId: string, userId: string): Promise<string> {
-    // PHASE 2 HARDENING: Verify ownership even in placeholder
     const version = await this.prisma.resumeVersion.findUnique({
       where: { id: versionId },
       include: { project: true },
@@ -537,9 +545,8 @@ export class VersionsService {
       throw new ForbiddenException('You do not have access to this version');
     }
 
-    // TODO: PHASE 4 - Real file download logic
-    // For now, return placeholder
-    return '\\documentclass{article}\n\\begin{document}\nPlaceholder\n\\end{document}';
+    // Return raw LaTeX content
+    return version.latexContent;
   }
 
   /**

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { apiUrl } from '@/lib/api';
 
 /**
  * PHASE 4: JD Input Component
@@ -44,7 +45,7 @@ export function JdInput({ projectId, onJdSubmitted, getToken }: JdInputProps) {
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch('http://localhost:3001/api/jd', {
+      const response = await fetch(apiUrl('/api/jd'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

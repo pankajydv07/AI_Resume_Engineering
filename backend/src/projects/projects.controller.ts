@@ -1,6 +1,7 @@
-import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ProjectsService } from './projects.service';
-import { CreateProjectDto, CreateProjectResponseDto, ProjectListItemDto } from './dto/project.dto';
+import { CreateProjectDto, CreateProjectResponseDto, ProjectListItemDto, UploadResumeDto } from './dto/project.dto';
 import { ClerkAuthGuard } from '../auth/guards/clerk-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
@@ -28,14 +29,51 @@ export class ProjectsController {
    * From apis.md Section 3.1
    * 
    * PHASE 2: Real database persistence
-   * TODO (PHASE 3): Implement real Clerk JWT validation
    */
   @Post()
   async createProject(
     @Body() createProjectDto: CreateProjectDto,
-    @CurrentUser() userId: string, // Real DB userId from auth guard
+    @CurrentUser() userId: string,
   ): Promise<CreateProjectResponseDto> {
     return this.projectsService.createProject(userId, createProjectDto);
+  }
+
+  /**
+   * POST /api/projects/upload
+   * Create project from uploaded resume (PDF or LaTeX)
+   * 
+   * PHASE 8: Resume upload functionality
+   * - LaTeX: Store as-is
+   * - PDF: Extract text, use AI to reconstruct LaTeX
+   * - Creates BASE version
+   */
+  @Post('upload')
+  @UseInterceptors(FileInterceptor('file', {
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB max
+    },
+    fileFilter: (req, file, callback) => {
+      const allowedMimes = ['application/pdf', 'application/x-tex', 'text/x-tex', 'text/plain'];
+      const allowedExtensions = ['.pdf', '.tex'];
+      const fileExtension = file.originalname.toLowerCase().substring(file.originalname.lastIndexOf('.'));
+      
+      if (allowedMimes.includes(file.mimetype) || allowedExtensions.includes(fileExtension)) {
+        callback(null, true);
+      } else {
+        callback(new BadRequestException('Only PDF and LaTeX (.tex) files are allowed'), false);
+      }
+    },
+  }))
+  async uploadResume(
+    @UploadedFile() file: any, // Express.Multer.File type
+    @Body() uploadDto: UploadResumeDto,
+    @CurrentUser() userId: string,
+  ): Promise<CreateProjectResponseDto> {
+    if (!file) {
+      throw new BadRequestException('File is required');
+    }
+
+    return this.projectsService.createProjectFromUpload(userId, uploadDto.name, file);
   }
 
   /**

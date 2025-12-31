@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { apiUrl } from '@/lib/api';
 
 /**
  * PHASE 6: Proposal Accept/Reject Component
@@ -57,7 +58,7 @@ export function ProposalActions({
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch('http://localhost:3001/api/ai/proposal/accept', {
+      const response = await fetch(apiUrl('/api/ai/proposal/accept'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -96,7 +97,7 @@ export function ProposalActions({
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch('http://localhost:3001/api/ai/proposal/reject', {
+      const response = await fetch(apiUrl('/api/ai/proposal/reject'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

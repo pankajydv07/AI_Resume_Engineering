@@ -1,4 +1,4 @@
-import { IsString } from 'class-validator';
+import { IsString, IsNotEmpty } from 'class-validator';
 
 /**
  * DTO for creating a resume project
@@ -15,6 +15,16 @@ export class CreateProjectDto {
  */
 export class CreateProjectResponseDto {
   projectId: string;
+}
+
+/**
+ * Request DTO for resume upload
+ * PHASE 8: Upload functionality
+ */
+export class UploadResumeDto {
+  @IsString()
+  @IsNotEmpty()
+  name: string;
 }
 
 /**

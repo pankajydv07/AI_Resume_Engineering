@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { DiffViewer } from './DiffViewer';
 import { ProposalActions } from './ProposalActions';
 import { handleHttpError, getErrorMessage } from '@/lib/errorHandling';
+import { apiUrl } from '@/lib/api';
 
 /**
  * PHASE 6: Proposal Modal Component
@@ -66,7 +67,7 @@ export function ProposalModal({
           throw new Error('Not authenticated');
         }
 
-        const response = await fetch(`http://localhost:3001/api/ai/jobs/${aiJobId}/proposal`, {
+        const response = await fetch(apiUrl(`/api/ai/jobs/${aiJobId}/proposal`), {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,

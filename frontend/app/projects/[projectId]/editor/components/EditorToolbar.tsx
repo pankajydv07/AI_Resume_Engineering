@@ -1,19 +1,21 @@
-'use client';
-
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { apiUrl } from '@/lib/api';
 
 /**
  * PHASE 3: Editor Toolbar Component
  * 
  * PHASE 7.1: Added navigation back to project
  * PHASE 8: Added Compile button with full functionality
+ * PHASE 8: Added Download PDF and Download LaTeX buttons
  * 
  * Per requirements:
  * - Save button calls PUT /api/versions/{versionId}
  * - Creates new MANUAL version
  * - Show minimal success feedback
  * - No autosave
+ * - Download PDF (enabled only if status === COMPILED)
+ * - Download LaTeX (always enabled)
  * 
  * Per userflow.md Section 2.5:
  * - Allowed actions: Save manual changes, Compile resume
@@ -27,6 +29,8 @@ interface EditorToolbarProps {
   onCompile?: () => Promise<void>;
   currentVersionId: string | null;
   projectId: string;
+  currentVersionStatus?: 'DRAFT' | 'COMPILED' | 'ERROR' | 'ACTIVE' | null;
+  getToken: () => Promise<string | null>;
   onSaveSuccess?: () => void;
 }
 
@@ -37,10 +41,13 @@ export function EditorToolbar({
   onCompile,
   currentVersionId,
   projectId,
+  currentVersionStatus,
+  getToken,
   onSaveSuccess,
 }: EditorToolbarProps) {
   const [showSuccess, setShowSuccess] = useState(false);
   const [isCompiling, setIsCompiling] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const handleSave = async () => {
     try {
@@ -79,6 +86,80 @@ export function EditorToolbar({
       return () => clearTimeout(timer);
     }
   }, [showSuccess]);
+
+  const handleDownloadPdf = async () => {
+    if (!currentVersionId) return;
+    
+    setIsDownloading(true);
+    try {
+      const token = await getToken();
+      
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
+      const response = await fetch(apiUrl(`/api/versions/${currentVersionId}/download/pdf`), {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download PDF');
+      }
+
+      const result = await response.json();
+      
+      // Open Cloudinary URL in new tab to download
+      window.open(result.url, '_blank');
+    } catch (err) {
+      console.error('Download failed:', err);
+      alert('Failed to download PDF. Please ensure the version is compiled.');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleDownloadLatex = async () => {
+    if (!currentVersionId) return;
+    
+    setIsDownloading(true);
+    try {
+      const token = await getToken();
+      
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
+      const response = await fetch(apiUrl(`/api/versions/${currentVersionId}/download/latex`), {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download LaTeX');
+      }
+
+      // Response is already a text file with proper headers
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `resume-${currentVersionId.substring(0, 8)}.tex`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Download failed:', err);
+      alert('Failed to download LaTeX file. Please try again.');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   return (
     <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
@@ -132,8 +213,27 @@ export function EditorToolbar({
           {isCompiling ? 'Compiling...' : 'Compile PDF'}
         </button>
 
-        {/* JD Tailoring Button - Forbidden in this phase */}
-        {/* Per requirements: No AI UI, No JD UI */}
+        {/* Download PDF Button - Only enabled if COMPILED */}
+        <button
+          type="button"
+          onClick={handleDownloadPdf}
+          disabled={!currentVersionId || currentVersionStatus !== 'COMPILED' || isDownloading}
+          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+          title={currentVersionStatus === 'COMPILED' ? 'Download compiled PDF' : 'Compile resume first to download PDF'}
+        >
+          {isDownloading ? '↓...' : '↓ PDF'}
+        </button>
+
+        {/* Download LaTeX Button - Always enabled */}
+        <button
+          type="button"
+          onClick={handleDownloadLatex}
+          disabled={!currentVersionId || isDownloading}
+          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+          title="Download LaTeX source code"
+        >
+          {isDownloading ? '↓...' : '↓ LaTeX'}
+        </button>
       </div>
     </div>
   );

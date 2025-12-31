@@ -99,6 +99,8 @@ export function EditorWorkspace({ projectId, initialVersionId }: EditorWorkspace
         onCompile={handleCompile}
         currentVersionId={currentVersionId}
         projectId={projectId}
+        currentVersionStatus={currentVersion?.status || null}
+        getToken={getToken}
       />
       
       {/* JD Panel Toggle Button */}
@@ -197,8 +199,9 @@ export function EditorWorkspace({ projectId, initialVersionId }: EditorWorkspace
               projectId={projectId} 
               baseVersionId={currentVersionId}
               baseLatexContent={latexDraft}
-              onVersionChange={(newVersionId) => {
-                switchVersion(newVersionId);
+              onVersionChange={async (newVersionId) => {
+                await switchVersion(newVersionId);
+                updateUrlWithVersion(newVersionId);
               }}
               getToken={getToken}
             />

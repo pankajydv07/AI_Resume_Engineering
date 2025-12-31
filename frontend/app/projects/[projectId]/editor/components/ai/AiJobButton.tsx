@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { ProposalModal } from './ProposalModal';
 import { handleHttpError, getErrorMessage } from '@/lib/errorHandling';
+import { apiUrl } from '@/lib/api';
 
 /**
  * PHASE 5: AI Job Button Component
@@ -83,7 +84,7 @@ export function AiJobButton({
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch('http://localhost:3001/api/ai/tailor', {
+      const response = await fetch(apiUrl('/api/ai/tailor'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -130,7 +131,7 @@ export function AiJobButton({
           return;
         }
 
-        const response = await fetch(`http://localhost:3001/api/ai/jobs/${id}`, {
+        const response = await fetch(apiUrl(`/api/ai/jobs/${id}`), {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,

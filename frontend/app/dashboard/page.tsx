@@ -5,6 +5,7 @@ import { UserButton, useAuth } from "@clerk/nextjs";
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { handleHttpError, getErrorMessage, isRetryableError } from '@/lib/errorHandling';
+import { apiUrl } from '@/lib/api';
 
 /**
  * Dashboard Page (/dashboard)
@@ -47,6 +48,11 @@ export default function DashboardPage() {
   const [projectName, setProjectName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  
+  // Resume upload state
+  const [creationMode, setCreationMode] = useState<'scratch' | 'upload'>('scratch');
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   // Fetch projects on mount
   useEffect(() => {
@@ -65,7 +71,7 @@ export default function DashboardPage() {
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch('http://localhost:3001/api/projects', {
+      const response = await fetch(apiUrl('/api/projects'), {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
@@ -99,52 +105,112 @@ export default function DashboardPage() {
       return;
     }
 
+    if (creationMode === 'upload' && !uploadFile) {
+      setCreateError('Please select a file to upload');
+      return;
+    }
+
     setIsCreating(true);
     setCreateError(null);
 
     try {
-      // PHASE 8: Real Clerk JWT authentication
       const token = await getToken();
       
       if (!token) {
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch('http://localhost:3001/api/projects', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          name: projectName.trim(),
-        }),
-      });
+      let projectId: string;
 
-      if (!response.ok) {
-        throw new Error(`Failed to create project: ${response.statusText}`);
+      if (creationMode === 'scratch') {
+        // Create empty project (existing flow)
+        const response = await fetch(apiUrl('/api/projects'), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            name: projectName.trim(),
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to create project: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        projectId = result.projectId;
+      } else {
+        // Upload resume file
+        setIsUploading(true);
+        
+        const formData = new FormData();
+        formData.append('name', projectName.trim());
+        formData.append('file', uploadFile!);
+
+        const response = await fetch(apiUrl('/api/projects/upload'), {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || `Failed to upload resume: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        projectId = result.projectId;
+        
+        setIsUploading(false);
       }
-
-      const result = await response.json();
       
-      // FIXED: Navigate to project page (NOT editor) - user must select version explicitly
-      router.push(`/projects/${result.projectId}`);
+      // Navigate to project page
+      router.push(`/projects/${projectId}`);
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : 'Unknown error');
       setIsCreating(false);
+      setIsUploading(false);
     }
   };
 
   const openCreateModal = () => {
     setProjectName('');
     setCreateError(null);
+    setCreationMode('scratch');
+    setUploadFile(null);
+    setIsUploading(false);
     setIsCreateModalOpen(true);
   };
 
   const closeCreateModal = () => {
-    if (!isCreating) {
+    if (!isCreating && !isUploading) {
       setIsCreateModalOpen(false);
       setProjectName('');
+      setCreateError(null);
+      setCreationMode('scratch');
+      setUploadFile(null);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      const validTypes = ['application/pdf', 'application/x-tex', 'text/x-tex', 'text/plain'];
+      const isPdf = file.type === 'application/pdf';
+      const isTex = file.name.endsWith('.tex') || validTypes.includes(file.type);
+      
+      if (!isPdf && !isTex) {
+        setCreateError('Please upload a PDF or LaTeX (.tex) file');
+        e.target.value = '';
+        return;
+      }
+      
+      setUploadFile(file);
       setCreateError(null);
     }
   };
@@ -290,12 +356,93 @@ export default function DashboardPage() {
                   type="text"
                   value={projectName}
                   onChange={(e) => setProjectName(e.target.value)}
-                  disabled={isCreating}
+                  disabled={isCreating || isUploading}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                   placeholder="e.g., Software Engineer Resume"
                   autoFocus
                 />
               </div>
+
+              {/* Creation Mode Selection */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  How would you like to start?
+                </label>
+                <div className="space-y-2">
+                  <label className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition">
+                    <input
+                      type="radio"
+                      name="creationMode"
+                      value="scratch"
+                      checked={creationMode === 'scratch'}
+                      onChange={() => {
+                        setCreationMode('scratch');
+                        setUploadFile(null);
+                        setCreateError(null);
+                      }}
+                      disabled={isCreating || isUploading}
+                      className="mr-3"
+                    />
+                    <div>
+                      <div className="font-medium text-gray-900">Build from scratch</div>
+                      <div className="text-xs text-gray-500">Start with a blank LaTeX template</div>
+                    </div>
+                  </label>
+                  
+                  <label className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition">
+                    <input
+                      type="radio"
+                      name="creationMode"
+                      value="upload"
+                      checked={creationMode === 'upload'}
+                      onChange={() => {
+                        setCreationMode('upload');
+                        setCreateError(null);
+                      }}
+                      disabled={isCreating || isUploading}
+                      className="mr-3"
+                    />
+                    <div>
+                      <div className="font-medium text-gray-900">Upload existing resume</div>
+                      <div className="text-xs text-gray-500">PDF or LaTeX (.tex) file</div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {/* File Upload (shown when upload mode selected) */}
+              {creationMode === 'upload' && (
+                <div className="mb-4">
+                  <label htmlFor="resumeFile" className="block text-sm font-medium text-gray-700 mb-2">
+                    Resume File
+                  </label>
+                  <input
+                    id="resumeFile"
+                    type="file"
+                    accept=".pdf,.tex,application/pdf,application/x-tex,text/x-tex"
+                    onChange={handleFileChange}
+                    disabled={isCreating || isUploading}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  />
+                  {uploadFile && (
+                    <p className="mt-2 text-sm text-gray-600">
+                      Selected: {uploadFile.name} ({(uploadFile.size / 1024).toFixed(1)} KB)
+                    </p>
+                  )}
+                  {isUploading && (
+                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800">
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
+                        <span>
+                          {uploadFile?.name.endsWith('.pdf') 
+                            ? 'Extracting text and generating LaTeX...' 
+                            : 'Processing LaTeX file...'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Error Display */}
               {createError && (
@@ -309,20 +456,25 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   onClick={closeCreateModal}
-                  disabled={isCreating}
+                  disabled={isCreating || isUploading}
                   className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg font-medium hover:bg-gray-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={isCreating || !projectName.trim()}
+                  disabled={
+                    isCreating || 
+                    isUploading ||
+                    !projectName.trim() ||
+                    (creationMode === 'upload' && !uploadFile)
+                  }
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                  {isCreating && (
+                  {(isCreating || isUploading) && (
                     <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
                   )}
-                  {isCreating ? 'Creating...' : 'Create Project'}
+                  {isCreating || isUploading ? 'Creating...' : 'Create Project'}
                 </button>
               </div>
             </form>

@@ -117,7 +117,8 @@ export class VersionsController {
    * Download PDF version
    * From apis.md Section 8.1
    * 
-   * PHASE 2: Placeholder only (file storage in PHASE 4)
+   * PHASE 8: Returns Cloudinary URL for direct download
+   * Frontend will redirect to this URL
    */
   @Get(':versionId/download/pdf')
   async downloadPdf(
@@ -126,7 +127,6 @@ export class VersionsController {
     @Res() res: Response,
   ): Promise<void> {
     const url = await this.versionsService.downloadPdf(versionId, userId);
-    // TODO: PHASE 4 - Return file stream or redirect to signed URL
     res.json({ url });
   }
 
@@ -135,7 +135,8 @@ export class VersionsController {
    * Download LaTeX source
    * From apis.md Section 8.2
    * 
-   * PHASE 2: Placeholder only (file download in PHASE 4)
+   * PHASE 8: Returns LaTeX content with proper headers
+   * Browser will trigger download via Content-Disposition header
    */
   @Get(':versionId/download/latex')
   async downloadLatex(
@@ -144,7 +145,10 @@ export class VersionsController {
     @Res() res: Response,
   ): Promise<void> {
     const content = await this.versionsService.downloadLatex(versionId, userId);
-    // TODO: PHASE 4 - Return file stream with proper headers
-    res.json({ content });
+    
+    // Set headers for file download
+    res.setHeader('Content-Type', 'application/x-latex');
+    res.setHeader('Content-Disposition', `attachment; filename="resume-${versionId.substring(0, 8)}.tex"`);
+    res.send(content);
   }
 }

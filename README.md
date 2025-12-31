@@ -23,6 +23,45 @@ No automatic actions. No silent updates. Every state transition requires explici
 ### 4. Contract-Driven Development
 All components operate on well-defined contracts (TypeScript interfaces, Prisma models, API schemas). Backend and frontend are loosely coupled through REST APIs. Each layer can evolve independently as long as contracts are honored.
 
+## Quick Start
+
+### Prerequisites
+- Docker & Docker Compose installed
+- Clerk account ([dashboard.clerk.com](https://dashboard.clerk.com/))
+- Nebius AI API key ([studio.nebius.ai](https://studio.nebius.ai/))
+- Cloudinary account ([cloudinary.com](https://cloudinary.com/))
+
+### Setup
+
+1. **Clone and configure environment**:
+   ```bash
+   cp .env.example .env
+   # Edit .env and add your API keys (see .env.example for details)
+   ```
+
+2. **Start with Docker**:
+   ```bash
+   docker-compose up --build
+   ```
+
+3. **Access the application**:
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:3001
+
+### Environment Variables
+
+The application requires the following environment variables. See `.env.example` for detailed descriptions:
+
+**Required**:
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` - Clerk authentication (frontend)
+- `CLERK_SECRET_KEY` - Clerk authentication (backend)
+- `NEXT_PUBLIC_BACKEND_URL` - Backend API URL (default: http://localhost:3001)
+- `DATABASE_URL` - PostgreSQL connection string
+- `NEBIUS_API_KEY` - AI service API key
+- `CLOUDINARY_URL` - PDF storage (or individual Cloudinary keys)
+
+For detailed setup instructions, see [DOCKER.md](DOCKER.md).
+
 ## Architecture Overview
 
 ### Core Entities

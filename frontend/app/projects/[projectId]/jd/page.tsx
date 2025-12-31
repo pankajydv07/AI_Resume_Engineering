@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
 import Link from 'next/link';
 import { handleHttpError, getErrorMessage } from '@/lib/errorHandling';
+import { apiUrl } from '@/lib/api';
 
 /**
  * Job Descriptions Page (/projects/{projectId}/jd)
@@ -53,7 +54,7 @@ export default function JobDescriptionsPage() {
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch(`http://localhost:3001/api/jd/project/${projectId}`, {
+      const response = await fetch(apiUrl(`/api/jd/project/${projectId}`), {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,

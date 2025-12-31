@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
 import Link from 'next/link';
 import { handleHttpError, getErrorMessage } from '@/lib/errorHandling';
+import { apiUrl } from '@/lib/api';
 
 /**
  * Project Detail Page (/projects/{projectId})
@@ -72,7 +73,7 @@ export default function ProjectPage() {
       }
 
       // Fetch project metadata from GET /projects (apis.md Section 3.2)
-      const projectsResponse = await fetch('http://localhost:3001/api/projects', {
+      const projectsResponse = await fetch(apiUrl('/api/projects'), {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
@@ -97,7 +98,7 @@ export default function ProjectPage() {
 
       // Fetch versions from GET /versions/project/{projectId} (apis.md Section 4.4)
       const versionsResponse = await fetch(
-        `http://localhost:3001/api/versions/project/${projectId}`,
+        apiUrl(`/api/versions/project/${projectId}`),
         {
           headers: {
             'Content-Type': 'application/json',

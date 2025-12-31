@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { handleHttpError, getErrorMessage } from '@/lib/errorHandling';
+import { apiUrl } from '@/lib/api';
 
 /**
  * PHASE 3: Version Selector Component
@@ -66,7 +67,7 @@ export function VersionSelector({
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch(`http://localhost:3001/api/versions/project/${projectId}`, {
+      const response = await fetch(apiUrl(`/api/versions/project/${projectId}`), {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
