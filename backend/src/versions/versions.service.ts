@@ -543,61 +543,6 @@ export class VersionsService {
   }
 
   /**
-   * Get active version for a project
-   * PHASE 2: Critical for editor loading
-   * 
-   * Returns the ACTIVE version for a project
-   * Used by frontend to load editor after project creation
-   * 
-   * CRITICAL FIX: Now looks for ACTIVE status (not just latest)
-   * Falls back to latest if no ACTIVE version exists (shouldn't happen)
-   */
-  async getActiveVersionForProject(projectId: string, userId: string): Promise<ResumeVersionDto> {
-    // Verify project ownership first
-    const project = await this.prisma.resumeProject.findUnique({
-      where: { id: projectId },
-    });
-
-    if (!project) {
-      throw new NotFoundException(`Project ${projectId} not found`);
-    }
-
-    if (project.userId !== userId) {
-      throw new ForbiddenException('You do not have access to this project');
-    }
-
-    // Find the ACTIVE version
-    const version = await this.prisma.resumeVersion.findFirst({
-      where: {
-        projectId,
-        status: 'ACTIVE',
-      },
-    });
-
-    // Fallback to latest if no ACTIVE version (shouldn't happen, but defensive)
-    const fallbackVersion = !version ? await this.prisma.resumeVersion.findFirst({
-      where: { projectId },
-      orderBy: { createdAt: 'desc' },
-    }) : null;
-
-    const finalVersion = version || fallbackVersion;
-
-    if (!finalVersion) {
-      throw new NotFoundException(`No versions found for project ${projectId}`);
-    }
-
-    return {
-      versionId: finalVersion.id,
-      projectId: finalVersion.projectId,
-      type: finalVersion.type,
-      status: finalVersion.status,
-      latexContent: finalVersion.latexContent,
-      pdfUrl: finalVersion.pdfUrl,
-      createdAt: finalVersion.createdAt.toISOString(),
-    };
-  }
-
-  /**
    * List all versions for a project
    * From apis.md Section 4.4
    * 

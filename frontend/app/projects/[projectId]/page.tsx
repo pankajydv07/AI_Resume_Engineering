@@ -31,86 +31,92 @@ interface ProjectMetadata {
   versionCount: number;
 }
 
+interface VersionListItem {
+  versionId: string;
+  projectId: string;
+  type: 'BASE' | 'MANUAL' | 'AI_GENERATED';
+  status: 'DRAFT' | 'COMPILED' | 'ERROR' | 'ACTIVE';
+  createdAt: string;
+  parentVersionId: string | null;
+}
+
 export default function ProjectPage() {
   const params = useParams();
   const { getToken } = useAuth();
   const projectId = params.projectId as string;
 
   const [project, setProject] = useState<ProjectMetadata | null>(null);
-  const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
+  const [versions, setVersions] = useState<VersionListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchProjectMetadata();
-    fetchActiveVersion();
+    fetchProjectData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
-  const fetchProjectMetadata = async () => {
+  /**
+   * Fetch project metadata and versions using ONLY legal endpoints from apis.md
+   * - GET /projects → project list
+   * - GET /versions/project/{projectId} → version list
+   */
+  const fetchProjectData = async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      // PHASE 8: Real Clerk JWT authentication
       const token = await getToken();
       
       if (!token) {
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch('http://localhost:3001/api/projects', {
+      // Fetch project metadata from GET /projects (apis.md Section 3.2)
+      const projectsResponse = await fetch('http://localhost:3001/api/projects', {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
       });
 
-      if (!response.ok) {
-        const errorInfo = await handleHttpError(response);
+      if (!projectsResponse.ok) {
+        const errorInfo = await handleHttpError(projectsResponse);
         throw errorInfo;
       }
 
-      const projects: ProjectMetadata[] = await response.json();
+      const projects: ProjectMetadata[] = await projectsResponse.json();
       const currentProject = projects.find(p => p.projectId === projectId);
 
       if (!currentProject) {
-        // PHASE 7.3: Proper 404 handling
         setError('Project not found');
         setIsLoading(false);
         return;
       }
 
       setProject(currentProject);
+
+      // Fetch versions from GET /versions/project/{projectId} (apis.md Section 4.4)
+      const versionsResponse = await fetch(
+        `http://localhost:3001/api/versions/project/${projectId}`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (versionsResponse.ok) {
+        const versionList: VersionListItem[] = await versionsResponse.json();
+        setVersions(versionList);
+      } else {
+        // Non-critical: project exists but no versions yet
+        setVersions([]);
+      }
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const fetchActiveVersion = async () => {
-    try {
-      const token = await getToken();
-      
-      if (!token) {
-        return; // Not blocking, just skip
-      }
-
-      const response = await fetch(`http://localhost:3001/api/projects/${projectId}/versions/active`, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const version = await response.json();
-        setActiveVersionId(version.versionId);
-      }
-    } catch (err) {
-      // Non-critical: editor can still load manually
-      console.error('Failed to fetch active version:', err);
     }
   };
 
@@ -196,33 +202,65 @@ export default function ProjectPage() {
 
             {/* Navigation Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Editor Link */}
-              <Link
-                href={activeVersionId ? `/projects/${projectId}/editor?versionId=${activeVersionId}` : `/projects/${projectId}/editor`}
-                className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition group"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition">
-                    Resume Editor
-                  </h3>
-                  <svg
-                    className="h-6 w-6 text-gray-400 group-hover:text-blue-600 transition"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
+              {/* Editor Link - Contract compliant navigation */}
+              {versions.length > 0 ? (
+                <Link
+                  href={`/projects/${projectId}/editor?versionId=${versions[0].versionId}`}
+                  className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition group"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition">
+                      Resume Editor
+                    </h3>
+                    <svg
+                      className="h-6 w-6 text-gray-400 group-hover:text-blue-600 transition"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    Edit resume versions, view LaTeX, and compile to PDF
+                  </p>
+                  <p className="text-xs text-gray-500 mt-2">
+                    {versions.length} version{versions.length !== 1 ? 's' : ''} available
+                  </p>
+                </Link>
+              ) : (
+                <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-semibold text-gray-500">
+                      Resume Editor
+                    </h3>
+                    <svg
+                      className="h-6 w-6 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                      />
+                    </svg>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-3">
+                    No versions available yet
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    A base version should have been created automatically. Try refreshing the page.
+                  </p>
                 </div>
-                <p className="text-sm text-gray-600">
-                  Edit resume versions, view LaTeX, and compile to PDF
-                </p>
-              </Link>
+              )}
 
               {/* Job Descriptions Link */}
               <Link
