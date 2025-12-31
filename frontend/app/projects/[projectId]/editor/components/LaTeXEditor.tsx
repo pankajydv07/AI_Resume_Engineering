@@ -1,6 +1,6 @@
 'use client';
 
-import { ChangeEvent } from 'react';
+import dynamic from 'next/dynamic';
 
 /**
  * PHASE 3: LaTeX Editor Component
@@ -10,7 +10,25 @@ import { ChangeEvent } from 'react';
  * - Sets isDirty flag when content changes
  * - No autosave
  * - No direct DB assumptions
+ * 
+ * ENHANCEMENT: Monaco Editor for improved editing experience
+ * - Drop-in replacement for textarea
+ * - Same value/onChange contract
+ * - No changes to state management or logic
  */
+
+// SSR-safe Monaco import
+const MonacoLatexEditor = dynamic(
+  () => import('./MonacoLatexEditor').then((mod) => ({ default: mod.MonacoLatexEditor })),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center h-full bg-gray-900 text-gray-400">
+        Loading editor...
+      </div>
+    ),
+  }
+);
 
 interface LaTeXEditorProps {
   value: string;
@@ -20,9 +38,6 @@ interface LaTeXEditorProps {
 }
 
 export function LaTeXEditor({ value, onChange, isDirty, isLoading }: LaTeXEditorProps) {
-  const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
-    onChange(e.target.value);
-  };
 
   return (
     <div className="flex flex-col h-full">
@@ -43,13 +58,11 @@ export function LaTeXEditor({ value, onChange, isDirty, isLoading }: LaTeXEditor
 
       {/* Editor Content */}
       <div className="flex-1 relative">
-        <textarea
+        <MonacoLatexEditor
           value={value}
-          onChange={handleChange}
+          onChange={onChange}
           disabled={isLoading}
-          className="absolute inset-0 w-full h-full p-4 font-mono text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-          placeholder="LaTeX content will appear here..."
-          spellCheck={false}
+          className="absolute inset-0"
         />
       </div>
     </div>
