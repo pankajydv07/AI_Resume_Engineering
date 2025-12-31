@@ -1,12 +1,15 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+
 /**
  * PHASE 3: PDF Preview Component
+ * PHASE 8: Enhanced with cache-busting and compile status
  * 
  * Per userflow.md Section 2.5:
  * - RIGHT side of editor layout
  * - Shows compiled PDF preview
- * - For now: Placeholder (compilation logic is future phase)
+ * - Refreshes when pdfUrl changes (compilation completes)
  */
 
 interface PDFPreviewProps {
@@ -15,6 +18,19 @@ interface PDFPreviewProps {
 }
 
 export function PDFPreview({ pdfUrl, versionId }: PDFPreviewProps) {
+  const [displayUrl, setDisplayUrl] = useState<string | null>(null);
+
+  // Update display URL with cache-busting when pdfUrl changes
+  useEffect(() => {
+    if (pdfUrl) {
+      // Add timestamp to force iframe reload (cache-busting)
+      const cacheBustedUrl = `${pdfUrl}?t=${Date.now()}`;
+      setDisplayUrl(cacheBustedUrl);
+    } else {
+      setDisplayUrl(null);
+    }
+  }, [pdfUrl, versionId]);
+
   return (
     <div className="flex flex-col h-full">
       {/* Preview Header */}
@@ -24,9 +40,10 @@ export function PDFPreview({ pdfUrl, versionId }: PDFPreviewProps) {
 
       {/* Preview Content */}
       <div className="flex-1 bg-gray-100 flex items-center justify-center p-4">
-        {pdfUrl ? (
+        {displayUrl ? (
           <iframe
-            src={pdfUrl}
+            key={displayUrl} // Force remount on URL change
+            src={displayUrl}
             className="w-full h-full border border-gray-300 bg-white shadow-sm"
             title="Resume PDF Preview"
           />
@@ -47,7 +64,7 @@ export function PDFPreview({ pdfUrl, versionId }: PDFPreviewProps) {
             </svg>
             <p className="text-sm">No PDF available</p>
             <p className="text-xs text-gray-400 mt-1">
-              Compile your resume to see preview
+              Click "Compile PDF" to generate preview
             </p>
           </div>
         )}

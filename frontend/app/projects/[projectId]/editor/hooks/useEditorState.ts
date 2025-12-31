@@ -215,6 +215,73 @@ export function useEditorState(projectId: string, getToken: () => Promise<string
     }
   }, [state.currentVersionId, state.latexDraft, loadVersion]);
 
+  /**
+   * Compile current version to PDF
+   * Per apis.md Section 4.3: POST /api/versions/{versionId}/compile
+   * 
+   * PHASE 8: LaTeX compilation with pdflatex
+   * - Calls backend compile endpoint
+   * - Backend compiles LaTeX → PDF
+   * - Backend uploads to Cloudinary
+   * - Backend updates version.pdfUrl
+   * - Frontend reloads version to get updated pdfUrl
+   */
+  const compileVersion = useCallback(async () => {
+    if (!state.currentVersionId) {
+      throw new Error('No version loaded');
+    }
+
+    setState(prev => ({ ...prev, isLoading: true, error: null }));
+
+    try {
+      const token = await getToken();
+      
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
+      const response = await fetch(`http://localhost:3001/api/versions/${state.currentVersionId}/compile`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorInfo = await handleHttpError(response);
+        throw errorInfo;
+      }
+
+      const result = await response.json();
+
+      if (result.status === 'error') {
+        // Compilation failed
+        const errorMsg = result.errors.length > 0 
+          ? `Compilation failed:\n${result.errors.join('\n')}`
+          : 'Compilation failed';
+        
+        setState(prev => ({
+          ...prev,
+          isLoading: false,
+          error: errorMsg,
+        }));
+        return;
+      }
+
+      // Compilation succeeded - reload version to get updated pdfUrl
+      await loadVersion(state.currentVersionId);
+
+    } catch (err) {
+      setState(prev => ({
+        ...prev,
+        isLoading: false,
+        error: getErrorMessage(err),
+      }));
+      throw err;
+    }
+  }, [state.currentVersionId, loadVersion, getToken]);
+
   return {
     // State
     currentVersionId: state.currentVersionId,
@@ -230,5 +297,6 @@ export function useEditorState(projectId: string, getToken: () => Promise<string
     updateDraft,
     switchVersion,
     saveEdit,
+    compileVersion,
   };
 }

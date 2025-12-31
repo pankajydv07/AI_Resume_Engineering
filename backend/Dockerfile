@@ -2,8 +2,10 @@
 
 FROM node:20-alpine AS base
 
-# Install OpenSSL for Prisma
-RUN apk add --no-cache openssl
+# Install OpenSSL for Prisma and TexLive for LaTeX compilation
+RUN apk add --no-cache \
+    openssl \
+    texlive-full
 
 # Install dependencies only when needed
 FROM base AS deps

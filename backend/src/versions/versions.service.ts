@@ -1,5 +1,10 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { v2 as cloudinary } from 'cloudinary';
+import * as fs from 'fs';
+import * as path from 'path';
+import { promisify } from 'util';
+import { exec } from 'child_process';
 import {
   ResumeVersionDto,
   SaveResumeEditDto,
@@ -8,6 +13,8 @@ import {
   VersionDiffDto,
   VersionListItemDto,
 } from './dto/version.dto';
+
+const execAsync = promisify(exec);
 
 /**
  * Versions Service
@@ -19,11 +26,46 @@ import {
  * - No LaTeX compilation (future phase)
  * - No diff logic (future phase)
  * 
+ * PHASE 8: COMPILATION & OUTPUT
+ * - LaTeX → PDF compilation using pdflatex
+ * - Cloudinary upload for PDF storage
+ * - Version immutability (no mutations, only status updates)
+ * 
  * From apis.md Sections 4, 7, 8
  */
 @Injectable()
 export class VersionsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {
+    // Configure Cloudinary from CLOUDINARY_URL environment variable
+    // Format: cloudinary://API_KEY:API_SECRET@CLOUD_NAME
+    console.log('🔧 Cloudinary Config Debug:');
+    console.log('CLOUDINARY_URL:', process.env.CLOUDINARY_URL ? 'SET' : 'NOT SET');
+    console.log('CLOUDINARY_CLOUD_NAME:', process.env.CLOUDINARY_CLOUD_NAME);
+    console.log('CLOUDINARY_API_KEY:', process.env.CLOUDINARY_API_KEY);
+    console.log('CLOUDINARY_API_SECRET:', process.env.CLOUDINARY_API_SECRET ? 'SET' : 'NOT SET');
+    
+    if (process.env.CLOUDINARY_URL) {
+      console.log('✅ Using CLOUDINARY_URL');
+      cloudinary.config({
+        cloudinary_url: process.env.CLOUDINARY_URL,
+      });
+    } else {
+      console.log('⚠️ Using individual config keys');
+      cloudinary.config({
+        cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+        api_key: process.env.CLOUDINARY_API_KEY,
+        api_secret: process.env.CLOUDINARY_API_SECRET,
+      });
+    }
+    
+    // Log final config (without secrets)
+    const config = cloudinary.config();
+    console.log('📦 Final Cloudinary config:', {
+      cloud_name: config.cloud_name,
+      api_key: config.api_key ? 'SET' : 'NOT SET',
+      api_secret: config.api_secret ? 'SET' : 'NOT SET',
+    });
+  }
 
   /**
    * Create base version for new project
@@ -158,14 +200,28 @@ export class VersionsService {
    * Compile resume version to PDF
    * From apis.md Section 4.3
    * 
-   * PHASE 2: Placeholder with ownership verification (security stub)
-   * TODO: PHASE 4 - Implement LaTeX compilation
-   * TODO: PHASE 4 - Upload PDF to S3-compatible storage
-   * TODO: PHASE 4 - Update version pdfUrl
-   * TODO: PHASE 4 - Handle compilation errors
+   * PHASE 8: REAL COMPILATION IMPLEMENTATION
+   * Per rules.md "Phase 8: Compilation & Output (STRICT)":
+   * - Compiler: pdflatex only
+   * - Execution: synchronous
+   * - Storage: Cloudinary (raw upload)
+   * - Immutability: NEVER creates versions, ONLY updates pdfUrl and status
+   * - If version.status === COMPILED → return success (idempotent)
+   * 
+   * Flow:
+   * 1. Verify ownership
+   * 2. Check if already compiled (idempotent)
+   * 3. Write LaTeX to temp directory (scoped by versionId)
+   * 4. Compile using pdflatex with security flags
+   * 5. Upload PDF to Cloudinary as raw file
+   * 6. Update version.pdfUrl and version.status
+   * 7. Clean up temp files
+   * 8. Return success or detailed errors
    */
   async compileVersion(versionId: string, userId: string): Promise<CompileResumeResponseDto> {
-    // PHASE 2 HARDENING: Verify ownership even in placeholder
+    console.log('🚀 Starting compilation for version:', versionId);
+    
+    // Step 1: Verify ownership
     const version = await this.prisma.resumeVersion.findUnique({
       where: { id: versionId },
       include: { project: true },
@@ -179,12 +235,183 @@ export class VersionsService {
       throw new ForbiddenException('You do not have access to this version');
     }
 
-    // TODO: PHASE 4 - Real compilation logic
-    // For now, return placeholder
-    return {
-      status: 'success',
-      errors: [],
-    };
+    console.log('✅ Ownership verified');
+
+    // Step 2: If already compiled, return success (idempotent per rules.md)
+    if (version.status === 'COMPILED' && version.pdfUrl) {
+      console.log('ℹ️ Already compiled, returning cached result');
+      return {
+        status: 'success',
+        errors: [],
+      };
+    }
+
+    // Step 3: Create temp directory scoped by versionId
+    const tempDir = path.join('/tmp', `resume-${versionId}`);
+    const texFilePath = path.join(tempDir, 'resume.tex');
+    const pdfFilePath = path.join(tempDir, 'resume.pdf');
+    const logFilePath = path.join(tempDir, 'resume.log');
+
+    console.log('📁 Temp directory:', tempDir);
+
+    try {
+      // Ensure temp directory exists
+      await fs.promises.mkdir(tempDir, { recursive: true });
+      console.log('✅ Temp directory created');
+
+      // Write LaTeX content to file
+      await fs.promises.writeFile(texFilePath, version.latexContent, 'utf-8');
+      console.log('✅ LaTeX file written');
+
+      // Step 4: Compile using pdflatex with security flags
+      // Flags per rules.md:
+      // - -interaction=nonstopmode (no user interaction)
+      // - -halt-on-error (stop on first error)
+      // - -no-shell-escape (security: disable shell commands)
+      const compileCommand = `pdflatex -interaction=nonstopmode -no-shell-escape -output-directory="${tempDir}" "${texFilePath}"`;
+
+      console.log('🔨 Running pdflatex...');
+
+      try {
+        // Run pdflatex compilation
+        await execAsync(compileCommand, {
+          cwd: tempDir,
+          timeout: 30000, // 30 second timeout
+        });
+
+        console.log('✅ pdflatex completed');
+
+        // Verify PDF was created
+        const pdfExists = await fs.promises.access(pdfFilePath, fs.constants.F_OK)
+          .then(() => true)
+          .catch(() => false);
+
+        if (!pdfExists) {
+          throw new Error('PDF file was not generated');
+        }
+
+        console.log('✅ PDF file created');
+
+      } catch (compileError) {
+        console.error('❌ Compilation failed:', compileError.message);
+        
+        // Step 4.1: Parse compilation errors from log file
+        const errors = await this.parseLatexErrors(logFilePath);
+
+        // Update version status to ERROR
+        await this.prisma.resumeVersion.update({
+          where: { id: versionId },
+          data: { status: 'ERROR' },
+        });
+
+        return {
+          status: 'error',
+          errors: errors.length > 0 ? errors : [compileError.message || 'Compilation failed'],
+        };
+      }
+
+      // Step 5: Upload PDF to Cloudinary as raw file
+      console.log('☁️ Uploading to Cloudinary...');
+      
+      try {
+        const uploadResult = await cloudinary.uploader.upload(pdfFilePath, {
+          resource_type: "image",
+          format: "pdf",
+          folder: "resumes",
+          public_id: `resume-${versionId}`,
+          overwrite: true,
+          type: "upload",        // ✅ PUBLIC
+          access_mode: "public", // ✅ IMPORTANT
+        });
+
+        const pdfUrl = uploadResult.secure_url;
+        console.log('✅ Uploaded PDF (image pipeline):', pdfUrl);
+
+        // Step 6: Update version with pdfUrl and status COMPILED
+        // Per rules.md: Compilation ONLY updates pdfUrl and status
+        await this.prisma.resumeVersion.update({
+          where: { id: versionId },
+          data: {
+            pdfUrl,
+            status: 'COMPILED',
+          },
+        });
+
+        console.log('✅ Database updated');
+
+        // Step 7: Clean up temp files
+        await this.cleanupTempDirectory(tempDir);
+        console.log('✅ Cleanup complete');
+
+        // Step 8: Return success
+        return {
+          status: 'success',
+          errors: [],
+        };
+      } catch (cloudinaryError) {
+        console.error('❌ Cloudinary upload failed:', cloudinaryError);
+        throw cloudinaryError;
+      }
+
+    } catch (error) {
+      console.error('❌ Compilation error:', error);
+      
+      // Clean up on any error
+      await this.cleanupTempDirectory(tempDir);
+
+      // Update version status to ERROR
+      await this.prisma.resumeVersion.update({
+        where: { id: versionId },
+        data: { status: 'ERROR' },
+      });
+
+      return {
+        status: 'error',
+        errors: [error.message || 'An unexpected error occurred during compilation'],
+      };
+    }
+  }
+
+  /**
+   * Parse LaTeX compilation errors from log file
+   * Extracts meaningful error messages for user display
+   */
+  private async parseLatexErrors(logFilePath: string): Promise<string[]> {
+    try {
+      const logContent = await fs.promises.readFile(logFilePath, 'utf-8');
+      const errors: string[] = [];
+
+      // Look for error patterns in LaTeX log
+      const errorLines = logContent.split('\n').filter(line => 
+        line.includes('!') || 
+        line.includes('Error:') || 
+        line.includes('Undefined control sequence')
+      );
+
+      // Extract first few meaningful errors
+      errorLines.slice(0, 5).forEach(line => {
+        const cleaned = line.trim();
+        if (cleaned.length > 0) {
+          errors.push(cleaned);
+        }
+      });
+
+      return errors.length > 0 ? errors : ['LaTeX compilation failed. Check your syntax.'];
+    } catch {
+      return ['Could not read compilation log'];
+    }
+  }
+
+  /**
+   * Clean up temporary compilation directory
+   */
+  private async cleanupTempDirectory(dirPath: string): Promise<void> {
+    try {
+      await fs.promises.rm(dirPath, { recursive: true, force: true });
+    } catch (error) {
+      console.error(`Failed to clean up temp directory ${dirPath}:`, error);
+      // Non-fatal error, just log it
+    }
   }
 
   /**

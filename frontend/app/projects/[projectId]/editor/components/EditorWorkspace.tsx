@@ -45,6 +45,7 @@ export function EditorWorkspace({ projectId, initialVersionId }: EditorWorkspace
     updateDraft,
     switchVersion,
     saveEdit,
+    compileVersion,
   } = useEditorState(projectId, getToken);
 
   // PHASE 4: JD Panel visibility state (completely separate from editor state)
@@ -63,6 +64,10 @@ export function EditorWorkspace({ projectId, initialVersionId }: EditorWorkspace
       // Update URL to reflect new version
       updateUrlWithVersion(newVersionId);
     });
+  };
+
+  const handleCompile = async () => {
+    await compileVersion();
   };
 
   const handleVersionSwitch = async (versionId: string) => {
@@ -87,6 +92,7 @@ export function EditorWorkspace({ projectId, initialVersionId }: EditorWorkspace
         isDirty={isDirty}
         isLoading={isLoading}
         onSave={handleSave}
+        onCompile={handleCompile}
         currentVersionId={currentVersionId}
         projectId={projectId}
       />

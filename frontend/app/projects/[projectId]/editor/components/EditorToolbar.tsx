@@ -7,6 +7,7 @@ import Link from 'next/link';
  * PHASE 3: Editor Toolbar Component
  * 
  * PHASE 7.1: Added navigation back to project
+ * PHASE 8: Added Compile button with full functionality
  * 
  * Per requirements:
  * - Save button calls PUT /api/versions/{versionId}
@@ -23,6 +24,7 @@ interface EditorToolbarProps {
   isDirty: boolean;
   isLoading: boolean;
   onSave: () => Promise<void>;
+  onCompile?: () => Promise<void>;
   currentVersionId: string | null;
   projectId: string;
   onSaveSuccess?: () => void;
@@ -32,11 +34,13 @@ export function EditorToolbar({
   isDirty,
   isLoading,
   onSave,
+  onCompile,
   currentVersionId,
   projectId,
   onSaveSuccess,
 }: EditorToolbarProps) {
   const [showSuccess, setShowSuccess] = useState(false);
+  const [isCompiling, setIsCompiling] = useState(false);
 
   const handleSave = async () => {
     try {
@@ -50,6 +54,21 @@ export function EditorToolbar({
     } catch (err) {
       console.error('Save failed:', err);
       alert('Failed to save changes. Please try again.');
+    }
+  };
+
+  const handleCompile = async () => {
+    if (!onCompile) return;
+    
+    setIsCompiling(true);
+    try {
+      await onCompile();
+      // Success feedback handled by parent component
+    } catch (err) {
+      console.error('Compilation failed:', err);
+      // Error is already in editor state, no need to alert
+    } finally {
+      setIsCompiling(false);
     }
   };
 
@@ -102,14 +121,15 @@ export function EditorToolbar({
           {isLoading ? 'Saving...' : 'Save Changes'}
         </button>
 
-        {/* Compile Button - Placeholder for future phase */}
+        {/* Compile Button - PHASE 8: Full implementation */}
         <button
           type="button"
-          disabled
-          className="px-4 py-2 text-sm font-medium text-gray-400 bg-gray-100 rounded cursor-not-allowed"
-          title="Compile functionality pending (future phase)"
+          onClick={handleCompile}
+          disabled={!currentVersionId || isCompiling || isLoading}
+          className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+          title="Compile LaTeX to PDF"
         >
-          Compile
+          {isCompiling ? 'Compiling...' : 'Compile PDF'}
         </button>
 
         {/* JD Tailoring Button - Forbidden in this phase */}
