@@ -50,6 +50,10 @@ export function EditorWorkspace({ projectId, initialVersionId }: EditorWorkspace
 
   // PHASE 4: JD Panel visibility state (completely separate from editor state)
   const [isJdPanelOpen, setIsJdPanelOpen] = React.useState(false);
+  
+  // Error/warning display state
+  const [isErrorExpanded, setIsErrorExpanded] = React.useState(false);
+  const isWarning = error?.startsWith('⚠️');
 
   // Update URL when version changes
   const updateUrlWithVersion = (versionId: string) => {
@@ -115,12 +119,29 @@ export function EditorWorkspace({ projectId, initialVersionId }: EditorWorkspace
         isDirty={isDirty}
       />
 
-      {/* Error Display */}
+      {/* Error/Warning Display */}
       {error && (
-        <div className="bg-red-50 border-b border-red-200 px-4 py-3">
-          <p className="text-sm text-red-800">
-            <strong>Error:</strong> {error}
-          </p>
+        <div className={`border-b px-4 py-3 ${isWarning ? 'bg-yellow-50 border-yellow-200' : 'bg-red-50 border-red-200'}`}>
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <p className={`text-sm font-semibold ${isWarning ? 'text-yellow-800' : 'text-red-800'}`}>
+                {isWarning ? 'Warning' : 'Error'}
+              </p>
+              <div className={`text-sm mt-1 ${isWarning ? 'text-yellow-700' : 'text-red-700'}`}>
+                {isErrorExpanded ? (
+                  <pre className="whitespace-pre-wrap font-mono text-xs">{error}</pre>
+                ) : (
+                  <p>{error.split('\n')[0]}</p>
+                )}
+              </div>
+            </div>
+            <button
+              onClick={() => setIsErrorExpanded(!isErrorExpanded)}
+              className={`ml-4 text-sm font-medium ${isWarning ? 'text-yellow-600 hover:text-yellow-700' : 'text-red-600 hover:text-red-700'}`}
+            >
+              {isErrorExpanded ? '▲ Collapse' : '▼ Expand'}
+            </button>
+          </div>
         </div>
       )}
 

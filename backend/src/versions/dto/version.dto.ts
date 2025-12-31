@@ -36,7 +36,7 @@ export class SaveResumeEditResponseDto {
  * From apis.md Section 4.3
  */
 export class CompileResumeResponseDto {
-  status: 'success' | 'error';
+  status: 'success' | 'warning' | 'error';
   errors: string[];
 }
 

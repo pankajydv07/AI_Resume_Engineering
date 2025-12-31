@@ -256,7 +256,7 @@ export function useEditorState(projectId: string, getToken: () => Promise<string
       const result = await response.json();
 
       if (result.status === 'error') {
-        // Compilation failed
+        // Compilation failed completely
         const errorMsg = result.errors.length > 0 
           ? `Compilation failed:\n${result.errors.join('\n')}`
           : 'Compilation failed';
@@ -269,8 +269,16 @@ export function useEditorState(projectId: string, getToken: () => Promise<string
         return;
       }
 
-      // Compilation succeeded - reload version to get updated pdfUrl
+      // Compilation succeeded (with or without warnings) - reload version to get updated pdfUrl
       await loadVersion(state.currentVersionId);
+      
+      // If there were warnings, show them but don't block
+      if (result.status === 'warning' && result.errors.length > 0) {
+        setState(prev => ({
+          ...prev,
+          error: `⚠️ PDF compiled with warnings:\n${result.errors.join('\n')}`,
+        }));
+      }
 
     } catch (err) {
       setState(prev => ({

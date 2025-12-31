@@ -272,6 +272,9 @@ export class VersionsService {
 
       console.log('🔨 Running pdflatex...');
 
+      let compilationErrors: string[] = [];
+      let hasCompilationWarnings = false;
+
       try {
         // Run pdflatex compilation
         await execAsync(compileCommand, {
@@ -281,23 +284,25 @@ export class VersionsService {
 
         console.log('✅ pdflatex completed');
 
-        // Verify PDF was created
-        const pdfExists = await fs.promises.access(pdfFilePath, fs.constants.F_OK)
-          .then(() => true)
-          .catch(() => false);
-
-        if (!pdfExists) {
-          throw new Error('PDF file was not generated');
-        }
-
-        console.log('✅ PDF file created');
-
       } catch (compileError) {
-        console.error('❌ Compilation failed:', compileError.message);
+        console.error('⚠️ Compilation had errors:', compileError.message);
+        hasCompilationWarnings = true;
         
-        // Step 4.1: Parse compilation errors from log file
-        const errors = await this.parseLatexErrors(logFilePath);
+        // Parse compilation errors from log file
+        compilationErrors = await this.parseLatexErrors(logFilePath);
+        if (compilationErrors.length === 0) {
+          compilationErrors = [compileError.message || 'Compilation had warnings'];
+        }
+      }
 
+      // Check if PDF was created (even if there were errors)
+      const pdfExists = await fs.promises.access(pdfFilePath, fs.constants.F_OK)
+        .then(() => true)
+        .catch(() => false);
+
+      if (!pdfExists) {
+        console.error('❌ PDF file was not generated');
+        
         // Update version status to ERROR
         await this.prisma.resumeVersion.update({
           where: { id: versionId },
@@ -306,8 +311,15 @@ export class VersionsService {
 
         return {
           status: 'error',
-          errors: errors.length > 0 ? errors : [compileError.message || 'Compilation failed'],
+          errors: compilationErrors.length > 0 ? compilationErrors : ['PDF file was not generated'],
         };
+      }
+
+      console.log('✅ PDF file created');
+
+      // If we have compilation warnings, log them but continue
+      if (hasCompilationWarnings) {
+        console.warn('⚠️ PDF created with warnings:', compilationErrors.join(', '));
       }
 
       // Step 5: Upload PDF to Cloudinary as raw file
@@ -343,7 +355,14 @@ export class VersionsService {
         await this.cleanupTempDirectory(tempDir);
         console.log('✅ Cleanup complete');
 
-        // Step 8: Return success
+        // Step 8: Return success or warning
+        if (hasCompilationWarnings) {
+          return {
+            status: 'warning',
+            errors: compilationErrors,
+          };
+        }
+        
         return {
           status: 'success',
           errors: [],
