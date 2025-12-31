@@ -90,6 +90,7 @@ model ResumeProject {
 /// - Versions are NEVER overwritten
 /// - AI always creates a new version
 /// - parentVersionId enables version trees
+/// - Only ONE ACTIVE version per project (enforced by unique constraint)
 ///
 /// PHASE 2 HARDENING: onDelete behavior explicit
 /// - Restrict on project: Cannot delete project with versions
@@ -113,6 +114,9 @@ model ResumeVersion {
   aiJobs        AIJob[]
   diffsFrom     VersionDiff[]   @relation("DiffFrom")
   diffsTo       VersionDiff[]   @relation("DiffTo")
+
+  // Indexes for query performance
+  @@index([projectId, status])
 }
 
 /// ResumeSection (database.md Section 4.4)
