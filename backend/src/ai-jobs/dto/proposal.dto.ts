@@ -1,8 +1,20 @@
-import { IsUUID } from 'class-validator';
+import { IsUUID, IsArray, IsOptional } from 'class-validator';
+import { SectionType } from '../../versions/dto/section.dto';
+
+/**
+ * GOAL 3: Section-level proposal data
+ */
+export interface SectionProposal {
+  sectionType: SectionType;
+  before: string;       // Original section content
+  after: string;        // AI-modified section content
+  changeType: 'modified' | 'unchanged' | 'added' | 'removed';
+}
 
 /**
  * DTO for accepting AI proposal
  * PHASE 6: Proposal acceptance
+ * GOAL 3: Enhanced with selective section acceptance
  */
 export class AcceptProposalDto {
   @IsUUID()
@@ -10,6 +22,10 @@ export class AcceptProposalDto {
 
   @IsUUID()
   projectId: string;
+
+  @IsOptional()
+  @IsArray()
+  acceptedSections?: SectionType[]; // If provided, accept only these sections
 }
 
 /**

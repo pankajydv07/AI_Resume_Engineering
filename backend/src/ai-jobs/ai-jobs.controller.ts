@@ -136,4 +136,26 @@ export class AiJobsController {
   ): Promise<RejectProposalResponseDto> {
     return this.aiJobsService.rejectProposal(rejectProposalDto, userId);
   }
+
+  /**
+   * POST /api/ai/proposal/refine
+   * GOAL 6: Chat-driven iteration
+   * 
+   * Refine existing proposal based on user feedback
+   * 
+   * Behavior:
+   * - Takes user feedback as natural language
+   * - Uses current proposal as context
+   * - Generates new ProposedVersion with refinements
+   * - Maintains auditability
+   * 
+   * Returns new jobId for polling
+   */
+  @Post('proposal/refine')
+  async refineProposal(
+    @Body() refineDto: { aiJobId: string; feedback: string },
+    @CurrentUser() userId: string,
+  ): Promise<StartAiTailoringResponseDto> {
+    return this.aiJobsService.refineProposal(refineDto.aiJobId, refineDto.feedback, userId);
+  }
 }

@@ -5,11 +5,17 @@ import { apiUrl } from '@/lib/api';
 
 /**
  * PHASE 6: Proposal Accept/Reject Component
+ * GOAL 4: Support selective section acceptance
  * 
  * WHY EXPLICIT ACCEPT/REJECT:
  * These are the only two paths for a ProposedVersion. There is no "save draft" or "auto-apply".
  * Accept → creates new ResumeVersion (type: AI_GENERATED) and adds it to version history.
  * Reject → proposal is discarded, no version created, no state change.
+ * 
+ * GOAL 4: Selective Acceptance:
+ * Users can now accept/reject individual sections. The acceptedSections array is sent
+ * to the backend, which merges only those sections into the final version.
+ * If acceptedSections is empty/undefined, all sections are accepted (backward compat).
  * 
  * WHY BACKEND CREATES VERSION:
  * Version creation happens server-side to enforce immutability guarantees. Frontend never
@@ -19,16 +25,13 @@ import { apiUrl } from '@/lib/api';
  * Once accepted, the AI-generated version is indistinguishable from any other version.
  * Users can switch back to previous versions via the version selector, but there's no
  * "undo AI accept" button. This simplifies the mental model: versions are immutable.
- * 
- * Forbidden:
- * - No partial acceptance
- * - No silent apply
  */
 
 interface ProposalActionsProps {
   aiJobId: string;
   projectId: string;
   baseVersionId: string;
+  acceptedSections?: string[]; // GOAL 4: Optional selective acceptance
   onAccepted: (newVersionId: string) => void;
   onRejected: () => void;
   getToken: () => Promise<string | null>;
@@ -38,6 +41,7 @@ export function ProposalActions({
   aiJobId,
   projectId,
   baseVersionId,
+  acceptedSections,
   onAccepted,
   onRejected,
   getToken,
@@ -67,6 +71,7 @@ export function ProposalActions({
         body: JSON.stringify({
           aiJobId,
           projectId,
+          acceptedSections, // GOAL 4: Send selected sections
         }),
       });
 

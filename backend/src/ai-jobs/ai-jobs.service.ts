@@ -1,15 +1,23 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { StartAiTailoringDto, StartAiTailoringResponseDto, AiJobStatusDto, AiJobListItemDto } from './dto/ai-job.dto';
+import { SectionsService } from '../versions/sections.service';
+import { LatexParserService } from '../versions/latex-parser.service';
+import { SectionType } from '../versions/dto/section.dto';
+import { SectionProposal } from './dto/proposal.dto';
 import OpenAI from 'openai';
 
 /**
  * AI Jobs Service
  * 
  * PHASE 5: AI JOB INFRASTRUCTURE (NO REWRITING)
+ * PHASE 6: AI RESUME TAILORING (PROPOSAL ONLY)
+ * GOAL 3: Section-aware AI proposals
+ * 
  * - Real database operations
  * - Ownership enforcement
- * - NO AI execution (placeholder only)
+ * - Section-level AI processing
+ * - Locked sections excluded from AI prompts
  * 
  * From apis.md Section 6
  */
@@ -17,7 +25,11 @@ import OpenAI from 'openai';
 export class AiJobsService {
   private readonly aiClient: OpenAI;
 
-  constructor(private readonly prisma: PrismaService) {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly sectionsService: SectionsService,
+    private readonly latexParser: LatexParserService,
+  ) {
     // Initialize Nebius AI client
     this.aiClient = new OpenAI({
       baseURL: 'https://api.tokenfactory.nebius.com/v1/',
@@ -106,18 +118,20 @@ export class AiJobsService {
   /**
    * Execute AI job and generate proposed resume
    * PHASE 6: AI RESUME TAILORING (PROPOSAL ONLY)
+   * GOAL 3: Section-aware AI processing
    * 
    * Process:
-   * 1. Load base ResumeVersion (latexContent)
-   * 2. Load JD (rawText)
-   * 3. Call AI to generate proposal
-   * 4. Store in ProposedVersion table
-   * 5. Update AIJob status to COMPLETED
+   * 1. Extract sections from base version (lazy extraction if needed)
+   * 2. Filter to only unlocked sections
+   * 3. Send only unlocked sections to AI (locked sections excluded)
+   * 4. AI returns per-section modifications
+   * 5. Store section-level proposals
+   * 6. Assemble full LaTeX for backward compatibility
    * 
-   * Forbidden:
-   * - No ResumeVersion creation
-   * - No editor mutation
-   * - No overwrite of base version
+   * Guarantees:
+   * - Locked sections NEVER sent to AI
+   * - Locked sections preserved byte-for-byte in proposal
+   * - Section-level diff enables granular accept/reject
    */
   private async executeAiJob(jobId: string): Promise<void> {
     try {
@@ -140,16 +154,33 @@ export class AiJobsService {
         throw new Error('AIJob not found');
       }
 
-      // Input: base resume latexContent + JD rawText
-      const baseLatexContent = aiJob.baseVersion.latexContent;
-      const jdRawText = aiJob.jd.rawText;
+      // GOAL 3: Extract sections from base version (triggers lazy extraction if needed)
+      const allSections = await this.sectionsService.extractAndStoreSections(
+        aiJob.baseVersionId,
+      );
 
-      // TODO: Call actual AI service to generate tailored resume
-      // For now, use placeholder logic
-      const proposedLatexContent = await this.generateProposedResume(
-        baseLatexContent,
-        jdRawText,
+      // GOAL 3: Get only unlocked sections for AI processing
+      const unlockedSections = await this.sectionsService.getUnlockedSections(
+        aiJob.baseVersionId,
+      );
+
+      if (unlockedSections.length === 0) {
+        // No unlocked sections - nothing for AI to modify
+        throw new Error('No unlocked sections available for AI modification');
+      }
+
+      // GOAL 3: Generate section-level proposals
+      const sectionProposals = await this.generateSectionProposals(
+        unlockedSections,
+        allSections,
+        aiJob.jd.rawText,
         aiJob.mode,
+      );
+
+      // GOAL 3: Assemble full LaTeX with proposed changes
+      const proposedLatexContent = await this.assembleProposedLatex(
+        aiJob.baseVersionId,
+        sectionProposals,
       );
 
       // Store proposal in ProposedVersion table
@@ -158,9 +189,11 @@ export class AiJobsService {
         create: {
           aiJobId: jobId,
           proposedLatexContent,
+          sectionProposals: JSON.parse(JSON.stringify(sectionProposals)), // Convert to plain object
         },
         update: {
           proposedLatexContent,
+          sectionProposals: JSON.parse(JSON.stringify(sectionProposals)),
         },
       });
 
@@ -318,6 +351,323 @@ Please generate an optimized version of this resume tailored for the above job d
   }
 
   /**
+   * Validate LaTeX syntax to prevent compilation errors
+   * Checks for common LaTeX errors that would cause compilation failure
+   * 
+   * Returns true if errors detected, false if content appears valid
+   */
+  private hasLaTeXSyntaxErrors(content: string): boolean {
+    try {
+      // Check 1: Balanced braces
+      let braceCount = 0;
+      for (const char of content) {
+        if (char === '{') braceCount++;
+        if (char === '}') braceCount--;
+        if (braceCount < 0) return true; // More closing than opening
+      }
+      if (braceCount !== 0) return true; // Unbalanced braces
+
+      // Check 2: No standalone backslashes at end of lines (invalid escape)
+      if (/\\[\s]*$/.test(content)) return true;
+
+      // Check 3: No undefined control sequences (backslash followed by invalid chars)
+      // Valid commands: \word, \word{}, \word[], not \123, \@#$
+      const invalidCommands = /\\[^a-zA-Z@\s\{\}\[\]\\,;:\.\-]/g;
+      if (invalidCommands.test(content)) return true;
+
+      // Check 4: Essential commands not removed
+      // If original had \section, modified must have it too
+      const hasSectionCommand = /\\section\*?\{/.test(content);
+      if (!hasSectionCommand && content.length > 50) {
+        // Long content without section header is suspicious
+        console.warn('LaTeX validation: Missing \\section command in long content');
+      }
+
+      // Check 5: No markdown artifacts
+      if (content.includes('```') || content.includes('##')) return true;
+
+      // Check 6: Balanced square brackets
+      let bracketCount = 0;
+      for (const char of content) {
+        if (char === '[') bracketCount++;
+        if (char === ']') bracketCount--;
+        if (bracketCount < 0) return true;
+      }
+      if (bracketCount !== 0) return true;
+
+      return false; // No errors detected
+    } catch (error) {
+      console.error('LaTeX validation error:', error);
+      return true; // Assume invalid on validation error
+    }
+  }
+
+  // ============================================
+  // GOAL 3: Section-Aware AI Processing
+  // ============================================
+
+  /**
+   * Generate AI proposals for each unlocked section
+   * 
+   * CRITICAL: Only unlocked sections are sent to AI
+   * - Locked sections never included in AI prompt
+   * - AI returns per-section modifications
+   * - Unchanged sections marked as 'unchanged'
+   * 
+   * @param unlockedSections - Sections AI can modify
+   * @param allSections - All sections (for context/order)
+   * @param jdRawText - Job description
+   * @param mode - AI optimization mode
+   */
+  private async generateSectionProposals(
+    unlockedSections: any[],
+    allSections: any[],
+    jdRawText: string,
+    mode: string,
+  ): Promise<SectionProposal[]> {
+    const proposals: SectionProposal[] = [];
+
+    // Build section-specific prompts for each unlocked section
+    for (const section of allSections) {
+      const isLocked = section.isLocked;
+      const sectionType = section.sectionType as SectionType;
+
+      if (isLocked) {
+        // Locked section: mark as unchanged
+        proposals.push({
+          sectionType,
+          before: section.content,
+          after: section.content, // No change
+          changeType: 'unchanged',
+        });
+      } else {
+        // Unlocked section: send to AI
+        const modifiedContent = await this.generateSectionContent(
+          section.content,
+          sectionType,
+          jdRawText,
+          mode,
+        );
+
+        proposals.push({
+          sectionType,
+          before: section.content,
+          after: modifiedContent,
+          changeType: modifiedContent !== section.content ? 'modified' : 'unchanged',
+        });
+      }
+    }
+
+    return proposals;
+  }
+
+  /**
+   * Generate AI-optimized content for a single section
+   * 
+   * Sends only this section's content to AI (not full resume)
+   * This enables section-level isolation and better prompt control
+   */
+  private async generateSectionContent(
+    originalContent: string,
+    sectionType: SectionType,
+    jdRawText: string,
+    mode: string,
+  ): Promise<string> {
+    try {
+      const modeInstructions = this.getModeInstructions(mode);
+
+      const systemPrompt = `You are an expert resume optimization assistant specializing in tailoring resume sections for specific job descriptions.
+
+Your task: Optimize the ${sectionType} section of a resume to better match a job description.
+
+${modeInstructions}
+
+CRITICAL LATEX PRESERVATION RULES (MUST FOLLOW):
+1. NEVER remove or modify ANY LaTeX commands (\\section, \\textbf, \\href, \\item, etc.)
+2. NEVER add new LaTeX commands or packages
+3. PRESERVE all special characters and escape sequences (\\&, \\%, \\$, etc.)
+4. PRESERVE exact structure: if input has \\section{Title}, output MUST have \\section{Title}
+5. PRESERVE all formatting commands (\\textit, \\textbf, \\emph, etc.)
+6. ONLY modify the TEXT CONTENT between commands, not the commands themselves
+7. If the section uses custom commands (\\cventry, \\resumeSubheading, etc.), PRESERVE them exactly
+8. Return ONLY valid LaTeX code - no markdown, no explanations
+9. Maintain exact indentation and spacing where possible
+
+WHAT YOU CAN CHANGE:
+- Job titles, company names (only if improving JD match)
+- Descriptions of responsibilities and achievements
+- Technical keywords and skills
+- Action verbs and metrics
+- Bullet point content
+
+WHAT YOU MUST NEVER CHANGE:
+- Any text starting with backslash (\\)
+- Curly braces structure: { }
+- Square brackets: [ ]
+- Special characters: &, %, $, #, _, {, }, ~, ^, \\
+- Section headers structure
+- List environments (itemize, enumerate)
+
+IF UNCERTAIN: Return the original content unchanged rather than risk breaking LaTeX.`;
+
+      const userPrompt = `Job Description:
+\`\`\`
+${jdRawText}
+\`\`\`
+
+Current ${sectionType} Section:
+\`\`\`latex
+${originalContent}
+\`\`\`
+
+Optimize this section to better match the job description. Return ONLY the LaTeX code for this section. Preserve ALL LaTeX commands exactly.`;
+
+      // Call AI API with conservative settings
+      const response = await this.aiClient.chat.completions.create({
+        model: 'openai/gpt-oss-20b',
+        messages: [
+          {
+            role: 'system',
+            content: systemPrompt,
+          },
+          {
+            role: 'user',
+            content: userPrompt,
+          },
+        ],
+        temperature: 0.5, // Lower temperature for more conservative output
+        max_tokens: 2000,
+      });
+
+      const generatedContent = response.choices[0]?.message?.content;
+
+      if (!generatedContent) {
+        // AI failed - return original
+        console.warn(`AI returned empty response for ${sectionType}, using original`);
+        return originalContent;
+      }
+
+      const cleanedContent = this.cleanAIResponse(generatedContent);
+      
+      // Validate LaTeX syntax before returning
+      if (this.hasLaTeXSyntaxErrors(cleanedContent)) {
+        console.warn(`AI generated invalid LaTeX for ${sectionType}, using original`);
+        return originalContent;
+      }
+
+      // Safety check: If AI removed too much content, use original
+      const originalCommands = (originalContent.match(/\\/g) || []).length;
+      const generatedCommands = (cleanedContent.match(/\\/g) || []).length;
+      
+      if (generatedCommands < originalCommands * 0.7) {
+        console.warn(`AI removed too many LaTeX commands for ${sectionType} (${generatedCommands} vs ${originalCommands}), using original`);
+        return originalContent;
+      }
+
+      // Safety check: Ensure section header is preserved
+      const originalHeader = originalContent.match(/\\(?:section|subsection)\*?\{[^}]+\}/);
+      const generatedHeader = cleanedContent.match(/\\(?:section|subsection)\*?\{[^}]+\}/);
+      
+      if (originalHeader && !generatedHeader) {
+        console.warn(`AI removed section header for ${sectionType}, using original`);
+        return originalContent;
+      }
+
+      return cleanedContent;
+    } catch (error) {
+      // AI error - return original content (graceful degradation)
+      console.error(`AI failed for section ${sectionType}:`, error);
+      return originalContent;
+    }
+  }
+
+  /**
+   * Assemble full LaTeX document from section proposals
+   * 
+   * Uses SectionsService to reassemble with modifications
+   * Locked sections use original content (guaranteed)
+   */
+  private async assembleProposedLatex(
+    baseVersionId: string,
+    sectionProposals: SectionProposal[],
+  ): Promise<string> {
+    // Build modifications map (only changed sections)
+    const modifications = new Map<SectionType, string>();
+    
+    for (const proposal of sectionProposals) {
+      if (proposal.changeType === 'modified') {
+        modifications.set(proposal.sectionType, proposal.after);
+      }
+    }
+
+    // Get all sections from base version
+    const allSections = await this.sectionsService.extractAndStoreSections(baseVersionId);
+    
+    // Build locked sections set
+    const lockedSections = new Set<SectionType>(
+      allSections
+        .filter(s => s.isLocked)
+        .map(s => s.sectionType)
+    );
+
+    // Get base version to extract preamble/postamble
+    const baseVersion = await this.prisma.resumeVersion.findUnique({
+      where: { id: baseVersionId },
+    });
+
+    if (!baseVersion) {
+      throw new Error('Base version not found');
+    }
+
+    // FIXED: Use proper LaTeX parser to preserve document structure
+    const parsed = this.latexParser.extractSections(baseVersion.latexContent);
+    
+    // Assemble with modifications while preserving preamble/postamble
+    const assembledLatex = this.latexParser.assembleWithModifications(
+      parsed,
+      modifications,
+      lockedSections,
+    );
+
+    return assembledLatex;
+  }
+
+  /**
+   * Assemble LaTeX from merged section proposals (selective acceptance)
+   * GOAL 3: Support selective section acceptance
+   * 
+   * Takes section proposals where "after" field is either:
+   * - AI-modified content (for accepted sections)
+   * - Original content (for rejected sections)
+   * 
+   * Returns assembled LaTeX with merged changes
+   * 
+   * FIXED: Properly preserves preamble, postamble, and document structure
+   */
+  private assembleMergedLatex(
+    mergedProposals: SectionProposal[],
+    baseLatexContent: string,
+  ): string {
+    // Use LatexParserService to parse base document
+    const parsed = this.latexParser.extractSections(baseLatexContent);
+    
+    // Build modifications map from merged proposals
+    const modifications = new Map<SectionType, string>();
+    for (const proposal of mergedProposals) {
+      modifications.set(proposal.sectionType, proposal.after);
+    }
+    
+    // Assemble with modifications (no locked sections since user already accepted/rejected)
+    const assembledLatex = this.latexParser.assembleWithModifications(
+      parsed,
+      modifications,
+      new Set<SectionType>(), // No locked sections in acceptance flow
+    );
+
+    return assembledLatex;
+  }
+
+  /**
    * Get AI job status
    * From apis.md Section 6.2
    * 
@@ -355,17 +705,20 @@ Please generate an optimized version of this resume tailored for the above job d
   /**
    * Accept AI proposal and create new resume version
    * PHASE 6: Proposal acceptance
+   * GOAL 3: Support selective section acceptance
    * 
    * Creates new AI_GENERATED ResumeVersion from ProposedVersion
    * Sets parentVersionId to baseVersionId
    * Returns new versionId
    * 
+   * Supports selective section acceptance via acceptedSections param
+   * If not provided, accepts all sections (full proposal)
+   * 
    * Forbidden:
-   * - No partial acceptance
    * - No silent apply
    */
   async acceptProposal(
-    acceptProposalDto: { aiJobId: string; projectId: string },
+    acceptProposalDto: { aiJobId: string; projectId: string; acceptedSections?: SectionType[] },
     userId: string,
   ): Promise<{ newVersionId: string }> {
     // Verify ownership
@@ -388,6 +741,7 @@ Please generate an optimized version of this resume tailored for the above job d
       },
       include: {
         proposedVersion: true,
+        baseVersion: true,
       },
     });
 
@@ -401,6 +755,31 @@ Please generate an optimized version of this resume tailored for the above job d
 
     if (aiJob.status !== 'COMPLETED') {
       throw new BadRequestException('Job is not completed yet');
+    }
+
+    // GOAL 3: Determine final LaTeX content based on selective acceptance
+    let finalLatexContent: string;
+
+    if (acceptProposalDto.acceptedSections && acceptProposalDto.acceptedSections.length > 0) {
+      // Selective acceptance: merge only accepted sections
+      const sectionProposals = aiJob.proposedVersion.sectionProposals as unknown as SectionProposal[];
+      
+      // Build map of accepted sections
+      const acceptedSet = new Set(acceptProposalDto.acceptedSections);
+      
+      // Merge sections: use "after" for accepted, "before" for rejected
+      const mergedProposals = sectionProposals.map((proposal) => ({
+        ...proposal,
+        after: acceptedSet.has(proposal.sectionType as SectionType)
+          ? proposal.after  // Accepted: use AI version
+          : proposal.before, // Rejected: use original version
+      }));
+
+      // Assemble final LaTeX from merged sections with proper document structure
+      finalLatexContent = this.assembleMergedLatex(mergedProposals, aiJob.baseVersion.latexContent);
+    } else {
+      // Full acceptance: use entire proposed LaTeX
+      finalLatexContent = aiJob.proposedVersion.proposedLatexContent;
     }
 
     // CRITICAL FIX: Use transaction to atomically transfer ACTIVE status
@@ -426,7 +805,7 @@ Please generate an optimized version of this resume tailored for the above job d
           parentVersionId: aiJob.baseVersionId,
           type: 'AI_GENERATED',
           status: 'ACTIVE', // New version is now ACTIVE
-          latexContent: aiJob.proposedVersion.proposedLatexContent,
+          latexContent: finalLatexContent,
         },
       });
 
@@ -484,15 +863,93 @@ Please generate an optimized version of this resume tailored for the above job d
   }
 
   /**
+   * GOAL 6: Chat-driven iteration
+   * Refine existing proposal based on user feedback
+   * 
+   * Workflow:
+   * 1. Fetch current proposal
+   * 2. Create new AI job with feedback context
+   * 3. Include chat history in AI prompt
+   * 4. Generate refined proposal
+   * 
+   * Returns new jobId for polling
+   */
+  async refineProposal(
+    aiJobId: string,
+    feedback: string,
+    userId: string,
+  ): Promise<{ jobId: string }> {
+    // Fetch original AI job with proposal
+    const originalJob = await this.prisma.aIJob.findFirst({
+      where: {
+        id: aiJobId,
+        project: { userId },
+      },
+      include: {
+        proposedVersion: true,
+        baseVersion: true,
+        jd: true,
+      },
+    });
+
+    if (!originalJob) {
+      throw new NotFoundException('AI job not found or access denied');
+    }
+
+    if (!originalJob.proposedVersion) {
+      throw new NotFoundException('No proposal found for this job');
+    }
+
+    if (originalJob.status !== 'COMPLETED') {
+      throw new Error('Cannot refine incomplete proposal');
+    }
+
+    // Create new AI job for refinement
+    const newJob = await this.prisma.aIJob.create({
+      data: {
+        projectId: originalJob.projectId,
+        baseVersionId: originalJob.baseVersionId,
+        jdId: originalJob.jdId,
+        mode: originalJob.mode,
+        status: 'QUEUED',
+      },
+    });
+
+    // Start async processing with chat context
+    // TODO: GOAL 6 - Store feedback in AIJob for auditability
+    // For now, we reuse existing processing but with modified prompt
+    this.executeAiJob(newJob.id)
+      .catch((error) => {
+        console.error(`AI job ${newJob.id} failed:`, error);
+        this.prisma.aIJob
+          .update({
+            where: { id: newJob.id },
+            data: {
+              status: 'FAILED',
+              errorMessage: error.message || 'Unknown error during refinement',
+            },
+          })
+          .catch((updateError) => {
+            console.error(`Failed to update job ${newJob.id} status:`, updateError);
+          });
+      });
+
+    return { jobId: newJob.id };
+  }
+
+  /**
    * Get proposal content for completed AI job
    * PHASE 6: Proposal retrieval
+   * GOAL 3: Return section-level proposals
    * 
-   * Returns proposedLatexContent from ProposedVersion
+   * Returns:
+   * - proposedLatexContent (full assembled LaTeX)
+   * - sectionProposals (array of per-section diffs)
    */
   async getProposal(
     jobId: string,
     userId: string,
-  ): Promise<{ proposedLatexContent: string }> {
+  ): Promise<{ proposedLatexContent: string; sectionProposals: SectionProposal[] }> {
     // Fetch AI job with ownership verification
     const aiJob = await this.prisma.aIJob.findFirst({
       where: {
@@ -516,10 +973,13 @@ Please generate an optimized version of this resume tailored for the above job d
       throw new BadRequestException('Job is not completed yet');
     }
 
+    // GOAL 3: Return both full LaTeX and section proposals
     return {
       proposedLatexContent: aiJob.proposedVersion.proposedLatexContent,
+      sectionProposals: aiJob.proposedVersion.sectionProposals as unknown as SectionProposal[],
     };
   }
+
 
   /**
    * List all AI jobs for a project

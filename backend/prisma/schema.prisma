@@ -139,6 +139,10 @@ model ResumeSection {
 
   // Relations with explicit delete behavior
   version ResumeVersion @relation(fields: [versionId], references: [id], onDelete: Restrict)
+
+  // Ensure unique section types per version + efficient queries
+  @@unique([versionId, sectionType])
+  @@index([versionId, orderIndex])
 }
 
 /// JobDescription (database.md Section 4.5)
@@ -200,10 +204,16 @@ model AIJob {
 /// - One proposal per AIJob
 /// - Must NOT be auto-applied to editor
 /// - User must explicitly accept to create ResumeVersion
+///
+/// GOAL 3: Enhanced for section-level proposals
+/// - sectionProposals: JSON array of {sectionType, before, after}
+/// - proposedLatexContent: Full assembled LaTeX (for backward compatibility)
+/// - Section-aware diffs enable granular accept/reject
 model ProposedVersion {
   id                    String   @id @default(uuid())
   aiJobId               String   @unique
   proposedLatexContent  String   @db.Text
+  sectionProposals      Json     @default("[]")
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
