@@ -162,20 +162,20 @@ export function EditorToolbar({
   };
 
   return (
-    <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+    <div className="bg-zinc-900/60 backdrop-blur-md border-b border-white/10 px-4 py-3 flex items-center justify-between">
       <div className="flex items-center gap-4">
         {/* Back to Project Link */}
         <Link
           href={`/projects/${projectId}`}
-          className="text-gray-600 hover:text-gray-900 transition"
+          className="text-zinc-400 hover:text-zinc-200 transition"
         >
           ← Back
         </Link>
         
-        <h1 className="text-lg font-semibold text-gray-900">Resume Editor</h1>
+        <h1 className="text-lg font-semibold text-zinc-100">Resume Editor</h1>
         
         {currentVersionId && (
-          <span className="text-xs text-gray-500 font-mono">
+          <span className="text-xs text-zinc-500 font-mono">
             v{currentVersionId.substring(0, 8)}
           </span>
         )}
@@ -184,7 +184,7 @@ export function EditorToolbar({
       <div className="flex items-center gap-3">
         {/* Success Feedback - Minimal Toast */}
         {showSuccess && (
-          <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded text-sm text-green-800">
+          <div className="flex items-center gap-2 px-3 py-2 bg-green-500/20 border border-green-500/30 rounded text-sm text-green-300 backdrop-blur-sm">
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
             </svg>
@@ -197,7 +197,7 @@ export function EditorToolbar({
           type="button"
           onClick={handleSave}
           disabled={!isDirty || isLoading || !currentVersionId}
-          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+          className="px-4 py-2 text-sm font-medium text-white bg-blue-600/90 hover:bg-blue-600 rounded-md disabled:bg-zinc-800/50 disabled:text-zinc-500 disabled:cursor-not-allowed transition-colors backdrop-blur-sm"
         >
           {isLoading ? 'Saving...' : 'Save Changes'}
         </button>
@@ -207,7 +207,7 @@ export function EditorToolbar({
           type="button"
           onClick={handleCompile}
           disabled={!currentVersionId || isCompiling || isLoading}
-          className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+          className="px-4 py-2 text-sm font-medium text-white bg-green-600/90 hover:bg-green-600 rounded-md disabled:bg-zinc-800/50 disabled:text-zinc-500 disabled:cursor-not-allowed transition-colors backdrop-blur-sm"
           title="Compile LaTeX to PDF"
         >
           {isCompiling ? 'Compiling...' : 'Compile PDF'}
@@ -218,7 +218,7 @@ export function EditorToolbar({
           type="button"
           onClick={handleDownloadPdf}
           disabled={!currentVersionId || currentVersionStatus !== 'COMPILED' || isDownloading}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+          className="px-4 py-2 text-sm font-medium text-zinc-200 bg-zinc-800/60 backdrop-blur-sm border border-white/10 rounded-md hover:bg-zinc-800/80 disabled:bg-zinc-900/30 disabled:text-zinc-600 disabled:cursor-not-allowed transition-colors"
           title={currentVersionStatus === 'COMPILED' ? 'Download compiled PDF' : 'Compile resume first to download PDF'}
         >
           {isDownloading ? '↓...' : '↓ PDF'}
@@ -229,7 +229,7 @@ export function EditorToolbar({
           type="button"
           onClick={handleDownloadLatex}
           disabled={!currentVersionId || isDownloading}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+          className="px-4 py-2 text-sm font-medium text-zinc-200 bg-zinc-800/60 backdrop-blur-sm border border-white/10 rounded-md hover:bg-zinc-800/80 disabled:bg-zinc-900/30 disabled:text-zinc-600 disabled:cursor-not-allowed transition-colors"
           title="Download LaTeX source code"
         >
           {isDownloading ? '↓...' : '↓ LaTeX'}

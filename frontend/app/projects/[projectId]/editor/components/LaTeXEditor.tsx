@@ -40,18 +40,18 @@ interface LaTeXEditorProps {
 export function LaTeXEditor({ value, onChange, isDirty, isLoading }: LaTeXEditorProps) {
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-zinc-900/40 backdrop-blur-sm">
       {/* PHASE 7.2: Section Header with Helper Text */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3">
+      <div className="bg-zinc-900/60 backdrop-blur-md border-b border-white/10 px-4 py-3">
         <div className="flex items-center justify-between mb-1">
-          <h2 className="text-sm font-semibold text-gray-900">Resume Editor</h2>
+          <h2 className="text-sm font-semibold text-zinc-200">Resume Editor</h2>
           {isDirty && (
-            <span className="text-xs text-orange-600 font-medium">
+            <span className="text-xs text-orange-400 font-medium">
               • Unsaved Changes
             </span>
           )}
         </div>
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-zinc-400">
           Edit your resume LaTeX code. Changes are saved manually as new versions.
         </p>
       </div>

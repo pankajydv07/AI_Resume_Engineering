@@ -20,6 +20,12 @@ import { apiUrl } from '@/lib/api';
  * WHY NO MUTATIONS:
  * Backend versions are immutable. We never PATCH existing versions. Every save creates
  * a new version with type=MANUAL. This preserves audit history and enables safe rollback.
+ * 
+ * UX IMPROVEMENTS (NON-BLOCKING):
+ * - Separate loading states for different operations
+ * - isSaving: True during save operation (non-blocking)
+ * - isCompiling: True during compile operation (non-blocking)
+ * - isLoading: True during initial load only
  */
 
 interface ResumeVersion {
@@ -37,6 +43,8 @@ interface EditorState {
   latexDraft: string;
   isDirty: boolean;
   isLoading: boolean;
+  isSaving: boolean;
+  isCompiling: boolean;
   error: string | null;
   currentVersion: ResumeVersion | null;
 }
@@ -47,6 +55,8 @@ export function useEditorState(projectId: string, getToken: () => Promise<string
     latexDraft: '',
     isDirty: false,
     isLoading: false,
+    isSaving: false,
+    isCompiling: false,
     error: null,
     currentVersion: null,
   });
@@ -86,6 +96,8 @@ export function useEditorState(projectId: string, getToken: () => Promise<string
         latexDraft: version.latexContent,
         isDirty: false,
         isLoading: false,
+        isSaving: false,
+        isCompiling: false,
         error: null,
         currentVersion: version,
       });
@@ -119,14 +131,17 @@ export function useEditorState(projectId: string, getToken: () => Promise<string
    */
   const switchVersion = useCallback(async (versionId: string) => {
     // Reset state before loading new version
-    setState({
+    setState(prev => ({
+      ...prev,
       currentVersionId: null,
       latexDraft: '',
       isDirty: false,
       isLoading: true,
+      isSaving: false,
+      isCompiling: false,
       error: null,
       currentVersion: null,
-    });
+    }));
 
     await loadVersion(versionId);
   }, [loadVersion]);
@@ -148,27 +163,31 @@ export function useEditorState(projectId: string, getToken: () => Promise<string
    */
   const loadLatestVersion = useCallback(async () => {
     console.warn('loadLatestVersion is deprecated and should not be called');
-    setState({
+    setState(prev => ({
+      ...prev,
       currentVersionId: null,
       latexDraft: '',
       isDirty: false,
       isLoading: false,
+      isSaving: false,
+      isCompiling: false,
       error: 'No version specified. Please select a version from the dashboard.',
       currentVersion: null,
-    });
+    }));
   }, []);
 
   /**
-   * Save manual edit
+   * Save manual edit (NON-BLOCKING)
    * Per apis.md Section 4.2: PUT /api/versions/{versionId}
    * Creates new MANUAL version, returns newVersionId
+   * Uses isSaving state instead of blocking isLoading
    */
   const saveEdit = useCallback(async (onSuccess?: (newVersionId: string) => void) => {
     if (!state.currentVersionId) {
       throw new Error('No version loaded');
     }
 
-    setState(prev => ({ ...prev, isLoading: true, error: null }));
+    setState(prev => ({ ...prev, isSaving: true, error: null }));
 
     try {
       // PHASE 8: Real Clerk JWT authentication
@@ -197,7 +216,7 @@ export function useEditorState(projectId: string, getToken: () => Promise<string
       const result = await response.json();
       const newVersionId = result.newVersionId;
 
-      // Load the newly created version
+      // Load the newly created version (this will reset isSaving)
       await loadVersion(newVersionId);
 
       // Trigger success callback if provided
@@ -209,7 +228,7 @@ export function useEditorState(projectId: string, getToken: () => Promise<string
     } catch (err) {
       setState(prev => ({
         ...prev,
-        isLoading: false,
+        isSaving: false,
         error: getErrorMessage(err),
       }));
       throw err;
@@ -217,8 +236,9 @@ export function useEditorState(projectId: string, getToken: () => Promise<string
   }, [state.currentVersionId, state.latexDraft, loadVersion]);
 
   /**
-   * Compile current version to PDF
+   * Compile current version to PDF (NON-BLOCKING)
    * Per apis.md Section 4.3: POST /api/versions/{versionId}/compile
+   * Uses isCompiling state instead of blocking isLoading
    * 
    * PHASE 8: LaTeX compilation with pdflatex
    * - Calls backend compile endpoint
@@ -232,7 +252,7 @@ export function useEditorState(projectId: string, getToken: () => Promise<string
       throw new Error('No version loaded');
     }
 
-    setState(prev => ({ ...prev, isLoading: true, error: null }));
+    setState(prev => ({ ...prev, isCompiling: true, error: null }));
 
     try {
       const token = await getToken();
@@ -264,14 +284,17 @@ export function useEditorState(projectId: string, getToken: () => Promise<string
         
         setState(prev => ({
           ...prev,
-          isLoading: false,
+          isCompiling: false,
           error: errorMsg,
         }));
-        return;
+        throw new Error(errorMsg);
       }
 
       // Compilation succeeded (with or without warnings) - reload version to get updated pdfUrl
       await loadVersion(state.currentVersionId);
+      
+      // Reset compiling state after reload
+      setState(prev => ({ ...prev, isCompiling: false }));
       
       // If there were warnings, show them but don't block
       if (result.status === 'warning' && result.errors.length > 0) {
@@ -284,7 +307,7 @@ export function useEditorState(projectId: string, getToken: () => Promise<string
     } catch (err) {
       setState(prev => ({
         ...prev,
-        isLoading: false,
+        isCompiling: false,
         error: getErrorMessage(err),
       }));
       throw err;
@@ -297,6 +320,8 @@ export function useEditorState(projectId: string, getToken: () => Promise<string
     latexDraft: state.latexDraft,
     isDirty: state.isDirty,
     isLoading: state.isLoading,
+    isSaving: state.isSaving,
+    isCompiling: state.isCompiling,
     error: state.error,
     currentVersion: state.currentVersion,
     

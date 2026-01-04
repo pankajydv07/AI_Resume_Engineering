@@ -126,13 +126,13 @@ export function VersionSelector({
   const currentVersion = versions.find(v => v.versionId === currentVersionId);
 
   return (
-    <div className="px-4 py-3 border-b border-gray-200 bg-white">
-      <label className="block text-xs font-medium text-gray-700 mb-2">
+    <div className="px-4 py-3 border-b border-white/10 bg-zinc-900/40 backdrop-blur-sm">
+      <label className="block text-xs font-medium text-zinc-400 mb-2">
         Version Selector
       </label>
       
       {error && (
-        <div className="mb-2 text-xs text-red-600">
+        <div className="mb-2 text-xs text-red-400">
           Failed to load versions: {error}
         </div>
       )}
@@ -143,13 +143,13 @@ export function VersionSelector({
             type="button"
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             disabled={isLoading || versions.length === 0}
-            className="w-full flex items-center justify-between px-3 py-2 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-between px-3 py-2 text-sm bg-zinc-800/60 backdrop-blur-sm border border-white/10 rounded-md hover:bg-zinc-800/80 focus:outline-none focus:ring-2 focus:ring-blue-500/50 disabled:bg-zinc-900/30 disabled:cursor-not-allowed text-zinc-200 transition-colors"
           >
             <span className="text-left">
               {currentVersion ? formatVersionLabel(currentVersion) : 'Loading...'}
             </span>
             <svg
-              className={`w-4 h-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
+              className={`w-4 h-4 transition-transform text-zinc-400 ${isDropdownOpen ? 'rotate-180' : ''}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -159,16 +159,16 @@ export function VersionSelector({
           </button>
 
           {isDropdownOpen && versions.length > 0 && (
-            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+            <div className="absolute z-10 w-full mt-1 bg-zinc-900/95 backdrop-blur-md border border-white/10 rounded-md shadow-lg max-h-60 overflow-y-auto">
               {versions.map((version) => (
                 <button
                   key={version.versionId}
                   type="button"
                   onClick={() => handleSwitch(version.versionId)}
-                  className={`w-full text-left px-3 py-2 text-sm hover:bg-blue-50 ${
+                  className={`w-full text-left px-3 py-2 text-sm hover:bg-zinc-800/80 transition-colors ${
                     version.versionId === currentVersionId
-                      ? 'bg-blue-100 font-medium'
-                      : ''
+                      ? 'bg-blue-600/20 text-blue-300 font-medium'
+                      : 'text-zinc-300'
                   }`}
                 >
                   {formatVersionLabel(version)}
@@ -177,12 +177,12 @@ export function VersionSelector({
             </div>
           )}
 
-          <div className="mt-1 text-xs text-gray-500">
+          <div className="mt-1 text-xs text-zinc-500">
             {versions.length} version{versions.length !== 1 ? 's' : ''} available
           </div>
         </div>
       ) : (
-        <div className="text-sm text-gray-500 italic">
+        <div className="text-sm text-zinc-500 italic">
           No version loaded
         </div>
       )}

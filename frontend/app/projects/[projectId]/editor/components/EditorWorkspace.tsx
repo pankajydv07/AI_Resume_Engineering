@@ -1,27 +1,28 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEditorState } from '../hooks/useEditorState';
-import { EditorToolbar } from './EditorToolbar';
-import { VersionSelector } from './VersionSelector';
+import { useToast } from '@/components/ui/Toast';
+import { HeaderBar } from './HeaderBar';
 import { LaTeXEditor } from './LaTeXEditor';
 import { PDFPreview } from './PDFPreview';
 import { AiPanel } from './ai/AiPanel';
 
 /**
  * PHASE 3: Main Editor Workspace Component
+ * REDESIGNED: Non-blocking loading with toast notifications
  * 
  * Per userflow.md Section 2.5:
  * - Layout: LEFT (LaTeX Editor) | RIGHT (PDF Preview)
  * - Manages editor state via useEditorState hook
  * - Handles version switching, saving, and editing
  * 
- * State Management:
- * - currentVersionId: UUID of loaded version
- * - latexDraft: In-memory edited content
- * - isDirty: True when latexDraft differs from saved version
+ * UX IMPROVEMENTS:
+ * - Toast notifications for background processes
+ * - Non-blocking loading states
+ * - Users can continue working while operations run
  */
 
 interface EditorWorkspaceProps {
@@ -33,11 +34,16 @@ export function EditorWorkspace({ projectId, initialVersionId }: EditorWorkspace
   const { getToken } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { addToast, updateToast, removeToast } = useToast();
+  const toastIdRef = useRef<string | null>(null);
+  
   const {
     currentVersionId,
     latexDraft,
     isDirty,
     isLoading,
+    isSaving,
+    isCompiling,
     error,
     currentVersion,
     loadVersion,
@@ -48,12 +54,8 @@ export function EditorWorkspace({ projectId, initialVersionId }: EditorWorkspace
     compileVersion,
   } = useEditorState(projectId, getToken);
 
-  // PHASE 4: AI Panel visibility state (completely separate from editor state)
-  const [isAiPanelOpen, setIsAiPanelOpen] = React.useState(false);
-  
-  // Error/warning display state
-  const [isErrorExpanded, setIsErrorExpanded] = React.useState(false);
-  const isWarning = error?.startsWith('⚠️');
+  // Panel mode: 'pdf' or 'ai' (mutually exclusive)
+  const [panelMode, setPanelMode] = React.useState<'pdf' | 'ai'>('pdf');
 
   // Update URL when version changes
   const updateUrlWithVersion = (versionId: string) => {
@@ -63,100 +65,110 @@ export function EditorWorkspace({ projectId, initialVersionId }: EditorWorkspace
   };
 
   const handleSave = async () => {
-    await saveEdit((newVersionId) => {
-      console.log('Save successful, new version:', newVersionId);
-      // Update URL to reflect new version
-      updateUrlWithVersion(newVersionId);
+    const toastId = addToast({
+      type: 'loading',
+      title: 'Saving changes...',
+      message: 'Creating new version',
     });
+    
+    try {
+      await saveEdit((newVersionId) => {
+        updateToast(toastId, {
+          type: 'success',
+          title: 'Saved successfully',
+          message: 'New version created',
+          duration: 3000,
+        });
+        updateUrlWithVersion(newVersionId);
+      });
+    } catch {
+      updateToast(toastId, {
+        type: 'error',
+        title: 'Save failed',
+        message: error || 'Could not save changes',
+        duration: 5000,
+      });
+    }
   };
 
   const handleCompile = async () => {
-    await compileVersion();
+    const toastId = addToast({
+      type: 'loading',
+      title: 'Compiling PDF...',
+      message: 'This may take a moment',
+    });
+    
+    try {
+      await compileVersion();
+      updateToast(toastId, {
+        type: 'success',
+        title: 'PDF compiled',
+        message: 'Preview updated',
+        duration: 3000,
+      });
+    } catch {
+      updateToast(toastId, {
+        type: 'error',
+        title: 'Compilation failed',
+        message: error || 'Check LaTeX syntax',
+        duration: 5000,
+      });
+    }
   };
 
   const handleVersionSwitch = async (versionId: string) => {
-    await switchVersion(versionId);
-    // Update URL to reflect switched version
-    updateUrlWithVersion(versionId);
+    const toastId = addToast({
+      type: 'loading',
+      title: 'Loading version...',
+    });
+    
+    try {
+      await switchVersion(versionId);
+      removeToast(toastId);
+      updateUrlWithVersion(versionId);
+    } catch {
+      updateToast(toastId, {
+        type: 'error',
+        title: 'Failed to load version',
+        duration: 4000,
+      });
+    }
   };
 
-  // FIXED: Load version from URL param ONLY if provided
-  // If no versionId, empty state will be shown (no version loaded)
+  // Load version from URL param
   useEffect(() => {
     if (initialVersionId) {
       loadVersion(initialVersionId);
     }
-    // If initialVersionId is null/undefined, component shows empty state automatically
   }, [initialVersionId, loadVersion]);
 
   return (
-    <div className="flex flex-col h-screen">
-      {/* Toolbar */}
-      <EditorToolbar
+    <div className="flex flex-col h-screen bg-zinc-950">
+      {/* Unified Header Bar with glassmorphism */}
+      <HeaderBar
+        projectId={projectId}
+        currentVersionId={currentVersionId}
+        currentVersionStatus={currentVersion?.status || null}
         isDirty={isDirty}
         isLoading={isLoading}
+        error={error}
+        panelMode={panelMode}
+        onPanelModeChange={setPanelMode}
         onSave={handleSave}
         onCompile={handleCompile}
-        currentVersionId={currentVersionId}
-        projectId={projectId}
-        currentVersionStatus={currentVersion?.status || null}
-        getToken={getToken}
+        onVersionSwitch={handleVersionSwitch}
       />
       
-      {/* AI Panel Toggle Button */}
-      <div className="border-b border-gray-200 px-4 py-2 bg-gray-50">
-        <button
-          onClick={() => setIsAiPanelOpen(!isAiPanelOpen)}
-          className="text-sm font-medium text-blue-600 hover:text-blue-700"
-        >
-          {isAiPanelOpen ? '← Hide AI Assistant' : '→ Show AI Assistant'}
-        </button>
-      </div>
-
-      {/* Version Selector */}
-      <VersionSelector
-        currentVersionId={currentVersionId}
-        projectId={projectId}
-        onVersionSwitch={handleVersionSwitch}
-        isDirty={isDirty}
-      />
-
-      {/* Error/Warning Display */}
-      {error && (
-        <div className={`border-b px-4 py-3 ${isWarning ? 'bg-yellow-50 border-yellow-200' : 'bg-red-50 border-red-200'}`}>
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <p className={`text-sm font-semibold ${isWarning ? 'text-yellow-800' : 'text-red-800'}`}>
-                {isWarning ? 'Warning' : 'Error'}
-              </p>
-              <div className={`text-sm mt-1 ${isWarning ? 'text-yellow-700' : 'text-red-700'}`}>
-                {isErrorExpanded ? (
-                  <pre className="whitespace-pre-wrap font-mono text-xs">{error}</pre>
-                ) : (
-                  <p>{error.split('\n')[0]}</p>
-                )}
-              </div>
-            </div>
-            <button
-              onClick={() => setIsErrorExpanded(!isErrorExpanded)}
-              className={`ml-4 text-sm font-medium ${isWarning ? 'text-yellow-600 hover:text-yellow-700' : 'text-red-600 hover:text-red-700'}`}
-            >
-              {isErrorExpanded ? '▲ Collapse' : '▼ Expand'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Main Editor Layout: LEFT | CENTER | RIGHT (conditional) */}
+      {/* Main Editor Layout: LEFT (Editor) | RIGHT (PDF or AI - mutually exclusive) */}
       <div className="flex-1 flex overflow-hidden">
         {/* LEFT: LaTeX Editor or Empty State */}
-        <div className={isAiPanelOpen ? 'w-1/3 border-r border-gray-200' : 'w-1/2 border-r border-gray-200'}>
+        <div className="w-1/2 border-r border-white/10">
           {!currentVersionId && !isLoading ? (
             /* Empty State - No Version Loaded */
-            <div className="flex h-full items-center justify-center bg-gray-50">
+            <div className="flex h-full items-center justify-center bg-zinc-900/40 backdrop-blur-sm">
               <div className="text-center max-w-md px-6">
                 <svg
-                  className="mx-auto h-12 w-12 text-gray-400"
+                  className="mx-auto h-12 w-12 text-zinc-500"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -168,8 +180,8 @@ export function EditorWorkspace({ projectId, initialVersionId }: EditorWorkspace
                     d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                   />
                 </svg>
-                <h3 className="mt-4 text-base font-medium text-gray-900">No Version Loaded</h3>
-                <p className="mt-2 text-sm text-gray-500">
+                <h3 className="mt-4 text-base font-medium text-zinc-200">No Version Loaded</h3>
+                <p className="mt-2 text-sm text-zinc-400">
                   Load a version using the selector above to begin editing.
                 </p>
               </div>
@@ -184,40 +196,48 @@ export function EditorWorkspace({ projectId, initialVersionId }: EditorWorkspace
           )}
         </div>
 
-        {/* CENTER: PDF Preview */}
-        <div className={isAiPanelOpen ? 'w-1/3 border-r border-gray-200' : 'w-1/2'}>
-          <PDFPreview
-            pdfUrl={currentVersion?.pdfUrl || null}
-            versionId={currentVersionId}
-          />
-        </div>
-
-        {/* RIGHT: AI Panel (conditional) */}
-        {isAiPanelOpen && (
-          <div className="w-1/3">
-            <AiPanel 
-              projectId={projectId} 
-              baseVersionId={currentVersionId}
-              baseLatexContent={latexDraft}
-              onVersionChange={async (newVersionId) => {
-                await switchVersion(newVersionId);
-                updateUrlWithVersion(newVersionId);
-              }}
-              getToken={getToken}
-              isEditorLocked={isLoading}
-            />
+        {/* RIGHT: PDF Preview or AI Panel (mutually exclusive) */}
+        <div className="w-1/2 relative overflow-hidden">
+          <div className="absolute inset-0">
+            {/* PDF Preview with fade transition */}
+            <div
+              className={`absolute inset-0 transition-opacity duration-300 ease-in-out ${
+                panelMode === 'pdf' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
+              }`}
+            >
+              <PDFPreview
+                pdfUrl={currentVersion?.pdfUrl || null}
+                versionId={currentVersionId}
+              />
+            </div>
+            {/* AI Panel with fade transition */}
+            <div
+              className={`absolute inset-0 transition-opacity duration-300 ease-in-out ${
+                panelMode === 'ai' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
+              }`}
+            >
+              <AiPanel 
+                projectId={projectId} 
+                baseVersionId={currentVersionId}
+                baseLatexContent={latexDraft}
+                onVersionChange={async (newVersionId) => {
+                  await switchVersion(newVersionId);
+                  updateUrlWithVersion(newVersionId);
+                }}
+                getToken={getToken}
+                isEditorLocked={isSaving || isCompiling}
+              />
+            </div>
           </div>
-        )}
+        </div>
       </div>
 
-      {/* Loading Overlay */}
-      {isLoading && (
-        <div className="fixed inset-0 bg-black bg-opacity-10 flex items-center justify-center pointer-events-none">
-          <div className="bg-white px-6 py-4 rounded-lg shadow-lg">
-            <div className="flex items-center gap-3">
-              <div className="animate-spin rounded-full h-5 w-5 border-2 border-blue-600 border-t-transparent" />
-              <span className="text-sm font-medium text-gray-700">Loading...</span>
-            </div>
+      {/* Inline Loading Indicator - Non-blocking, shows only during initial load */}
+      {isLoading && !currentVersionId && (
+        <div className="fixed bottom-20 right-4 z-40">
+          <div className="bg-zinc-900/95 backdrop-blur-md border border-zinc-700/50 px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-3">
+            <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+            <span className="text-sm text-zinc-300">Loading version...</span>
           </div>
         </div>
       )}

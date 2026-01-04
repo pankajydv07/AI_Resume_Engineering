@@ -36,13 +36,7 @@ const execAsync = promisify(exec);
 @Injectable()
 export class VersionsService {
   constructor(private readonly prisma: PrismaService) {
-    // Configure Cloudinary from CLOUDINARY_URL environment variable
-    // Format: cloudinary://API_KEY:API_SECRET@CLOUD_NAME
-    console.log('🔧 Cloudinary Config Debug:');
-    console.log('CLOUDINARY_URL:', process.env.CLOUDINARY_URL ? 'SET' : 'NOT SET');
-    console.log('CLOUDINARY_CLOUD_NAME:', process.env.CLOUDINARY_CLOUD_NAME);
-    console.log('CLOUDINARY_API_KEY:', process.env.CLOUDINARY_API_KEY);
-    console.log('CLOUDINARY_API_SECRET:', process.env.CLOUDINARY_API_SECRET ? 'SET' : 'NOT SET');
+   
     
     if (process.env.CLOUDINARY_URL) {
       console.log('✅ Using CLOUDINARY_URL');
@@ -323,21 +317,18 @@ export class VersionsService {
       }
 
       // Step 5: Upload PDF to Cloudinary as raw file
-      console.log('☁️ Uploading to Cloudinary...');
+      console.log('Uploading to Cloudinary...');
       
       try {
-        const uploadResult = await cloudinary.uploader.upload(pdfFilePath, {
-          resource_type: "image",
-          format: "pdf",
-          folder: "resumes",
-          public_id: `resume-${versionId}`,
-          overwrite: true,
-          type: "upload",        // ✅ PUBLIC
-          access_mode: "public", // ✅ IMPORTANT
-        });
+      const uploadResult = await cloudinary.uploader.upload(pdfFilePath, {
+        resource_type: "raw",
+        folder: "resumes",
+        public_id: `resume-${versionId}`,
+        overwrite: true,
+      });
 
         const pdfUrl = uploadResult.secure_url;
-        console.log('✅ Uploaded PDF (image pipeline):', pdfUrl);
+        console.log('✅ PDF uploaded to Cloudinary:', pdfUrl);
 
         // Step 6: Update version with pdfUrl and status COMPILED
         // Per rules.md: Compilation ONLY updates pdfUrl and status
