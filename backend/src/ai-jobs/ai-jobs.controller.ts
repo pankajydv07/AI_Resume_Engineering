@@ -5,6 +5,7 @@ import { AiJobsService } from './ai-jobs.service';
 import { StartAiTailoringDto, StartAiTailoringResponseDto, AiJobStatusDto, AiJobListItemDto } from './dto/ai-job.dto';
 import { AcceptProposalDto, AcceptProposalResponseDto, RejectProposalDto, RejectProposalResponseDto } from './dto/proposal.dto';
 import { GetProposalResponseDto } from './dto/get-proposal.dto';
+import { SendChatDto, ChatResponseDto } from './dto/chat.dto';
 
 /**
  * AI Jobs Controller
@@ -157,5 +158,25 @@ export class AiJobsController {
     @CurrentUser() userId: string,
   ): Promise<StartAiTailoringResponseDto> {
     return this.aiJobsService.refineProposal(refineDto.aiJobId, refineDto.feedback, userId);
+  }
+
+  /**
+   * POST /api/ai/chat
+   * Chat mode endpoint for conversational AI assistance
+   * 
+   * Provides resume advice, suggestions, and answers without modifying resume.
+   * Stateless - frontend manages conversation history.
+   * 
+   * Context provided:
+   * - Resume content (optional)
+   * - Job description (optional)
+   * - Conversation history (optional)
+   */
+  @Post('chat')
+  async chat(
+    @Body() chatDto: SendChatDto,
+    @CurrentUser() userId: string,
+  ): Promise<ChatResponseDto> {
+    return this.aiJobsService.chat(chatDto, userId);
   }
 }

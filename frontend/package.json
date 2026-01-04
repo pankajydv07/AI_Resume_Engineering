@@ -11,9 +11,12 @@
   "dependencies": {
     "@clerk/nextjs": "^5.0.0",
     "@monaco-editor/react": "^4.7.0",
+    "@types/react-syntax-highlighter": "^15.5.13",
     "next": "14.2.0",
     "react": "^18.3.0",
-    "react-dom": "^18.3.0"
+    "react-dom": "^18.3.0",
+    "react-markdown": "^10.1.0",
+    "react-syntax-highlighter": "^16.1.0"
   },
   "devDependencies": {
     "@types/node": "^20",

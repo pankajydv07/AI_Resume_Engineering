@@ -8,7 +8,7 @@ import { EditorToolbar } from './EditorToolbar';
 import { VersionSelector } from './VersionSelector';
 import { LaTeXEditor } from './LaTeXEditor';
 import { PDFPreview } from './PDFPreview';
-import { JdPanel } from './jd/JdPanel';
+import { AiPanel } from './ai/AiPanel';
 
 /**
  * PHASE 3: Main Editor Workspace Component
@@ -48,8 +48,8 @@ export function EditorWorkspace({ projectId, initialVersionId }: EditorWorkspace
     compileVersion,
   } = useEditorState(projectId, getToken);
 
-  // PHASE 4: JD Panel visibility state (completely separate from editor state)
-  const [isJdPanelOpen, setIsJdPanelOpen] = React.useState(false);
+  // PHASE 4: AI Panel visibility state (completely separate from editor state)
+  const [isAiPanelOpen, setIsAiPanelOpen] = React.useState(false);
   
   // Error/warning display state
   const [isErrorExpanded, setIsErrorExpanded] = React.useState(false);
@@ -103,13 +103,13 @@ export function EditorWorkspace({ projectId, initialVersionId }: EditorWorkspace
         getToken={getToken}
       />
       
-      {/* JD Panel Toggle Button */}
+      {/* AI Panel Toggle Button */}
       <div className="border-b border-gray-200 px-4 py-2 bg-gray-50">
         <button
-          onClick={() => setIsJdPanelOpen(!isJdPanelOpen)}
+          onClick={() => setIsAiPanelOpen(!isAiPanelOpen)}
           className="text-sm font-medium text-blue-600 hover:text-blue-700"
         >
-          {isJdPanelOpen ? '← Hide Job Descriptions' : '→ Show Job Descriptions'}
+          {isAiPanelOpen ? '← Hide AI Assistant' : '→ Show AI Assistant'}
         </button>
       </div>
 
@@ -150,7 +150,7 @@ export function EditorWorkspace({ projectId, initialVersionId }: EditorWorkspace
       {/* Main Editor Layout: LEFT | CENTER | RIGHT (conditional) */}
       <div className="flex-1 flex overflow-hidden">
         {/* LEFT: LaTeX Editor or Empty State */}
-        <div className={isJdPanelOpen ? 'w-1/3 border-r border-gray-200' : 'w-1/2 border-r border-gray-200'}>
+        <div className={isAiPanelOpen ? 'w-1/3 border-r border-gray-200' : 'w-1/2 border-r border-gray-200'}>
           {!currentVersionId && !isLoading ? (
             /* Empty State - No Version Loaded */
             <div className="flex h-full items-center justify-center bg-gray-50">
@@ -185,17 +185,17 @@ export function EditorWorkspace({ projectId, initialVersionId }: EditorWorkspace
         </div>
 
         {/* CENTER: PDF Preview */}
-        <div className={isJdPanelOpen ? 'w-1/3 border-r border-gray-200' : 'w-1/2'}>
+        <div className={isAiPanelOpen ? 'w-1/3 border-r border-gray-200' : 'w-1/2'}>
           <PDFPreview
             pdfUrl={currentVersion?.pdfUrl || null}
             versionId={currentVersionId}
           />
         </div>
 
-        {/* RIGHT: JD Panel (conditional) */}
-        {isJdPanelOpen && (
+        {/* RIGHT: AI Panel (conditional) */}
+        {isAiPanelOpen && (
           <div className="w-1/3">
-            <JdPanel 
+            <AiPanel 
               projectId={projectId} 
               baseVersionId={currentVersionId}
               baseLatexContent={latexDraft}
@@ -204,6 +204,7 @@ export function EditorWorkspace({ projectId, initialVersionId }: EditorWorkspace
                 updateUrlWithVersion(newVersionId);
               }}
               getToken={getToken}
+              isEditorLocked={isLoading}
             />
           </div>
         )}

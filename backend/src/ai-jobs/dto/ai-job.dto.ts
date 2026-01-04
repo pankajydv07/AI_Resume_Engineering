@@ -1,4 +1,4 @@
-import { IsUUID, IsEnum, IsArray, IsOptional } from 'class-validator';
+import { IsUUID, IsEnum, IsArray, IsOptional, IsString } from 'class-validator';
 
 /**
  * DTO for starting AI tailoring job
@@ -12,7 +12,8 @@ export class StartAiTailoringDto {
   baseVersionId: string;
 
   @IsUUID()
-  jdId: string;
+  @IsOptional()
+  jdId?: string;
 
   @IsEnum(['MINIMAL', 'BALANCED', 'AGGRESSIVE'])
   mode: 'MINIMAL' | 'BALANCED' | 'AGGRESSIVE';
@@ -20,6 +21,10 @@ export class StartAiTailoringDto {
   @IsArray()
   @IsOptional()
   lockedSections?: string[];
+
+  @IsString()
+  @IsOptional()
+  userInstructions?: string;
 }
 
 /**

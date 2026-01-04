@@ -38,6 +38,21 @@ export function MonacoDiffViewer({
     diffEditorRef.current = editor;
   };
 
+  // Cleanup effect to prevent "TextModel got disposed before DiffEditorWidget" error
+  useEffect(() => {
+    return () => {
+      if (diffEditorRef.current) {
+        try {
+          // Set model to null before component unmounts
+          diffEditorRef.current.setModel(null);
+        } catch (error) {
+          // Ignore disposal errors during unmount
+          console.warn('Monaco diff editor cleanup warning:', error);
+        }
+      }
+    };
+  }, []);
+
   return (
     <div className={`w-full h-full ${className}`}>
       <DiffEditor

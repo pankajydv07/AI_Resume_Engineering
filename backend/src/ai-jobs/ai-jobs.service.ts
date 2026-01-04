@@ -5,6 +5,7 @@ import { SectionsService } from '../versions/sections.service';
 import { LatexParserService } from '../versions/latex-parser.service';
 import { SectionType } from '../versions/dto/section.dto';
 import { SectionProposal } from './dto/proposal.dto';
+import { SendChatDto, ChatResponseDto } from './dto/chat.dto';
 import OpenAI from 'openai';
 
 /**
@@ -34,6 +35,8 @@ export class AiJobsService {
     this.aiClient = new OpenAI({
       baseURL: 'https://api.tokenfactory.nebius.com/v1/',
       apiKey: process.env.NEBIUS_API_KEY,
+      timeout: 30000, // 30 second timeout
+      maxRetries: 2,
     });
   }
   /**
@@ -53,7 +56,7 @@ export class AiJobsService {
     startTailoringDto: StartAiTailoringDto,
     userId: string,
   ): Promise<StartAiTailoringResponseDto> {
-    const { projectId, baseVersionId, jdId, mode } = startTailoringDto;
+    const { projectId, baseVersionId, jdId, mode, userInstructions } = startTailoringDto;
 
     // Verify user owns the project
     const project = await this.prisma.resumeProject.findUnique({
@@ -81,17 +84,20 @@ export class AiJobsService {
       throw new ForbiddenException('Version does not belong to this project');
     }
 
-    // Verify JD exists and belongs to the project
-    const jd = await this.prisma.jobDescription.findUnique({
-      where: { id: jdId },
-    });
+    // Verify JD exists and belongs to the project (if provided)
+    let jd = null;
+    if (jdId) {
+      jd = await this.prisma.jobDescription.findUnique({
+        where: { id: jdId },
+      });
 
-    if (!jd) {
-      throw new NotFoundException(`Job description ${jdId} not found`);
-    }
+      if (!jd) {
+        throw new NotFoundException(`Job description ${jdId} not found`);
+      }
 
-    if (jd.projectId !== projectId) {
-      throw new ForbiddenException('Job description does not belong to this project');
+      if (jd.projectId !== projectId) {
+        throw new ForbiddenException('Job description does not belong to this project');
+      }
     }
 
     // Create AIJob with status=QUEUED
@@ -99,7 +105,7 @@ export class AiJobsService {
       data: {
         projectId,
         baseVersionId,
-        jdId,
+        jdId: jdId || null,
         mode,
         status: 'QUEUED',
         errorMessage: null,
@@ -108,7 +114,7 @@ export class AiJobsService {
 
     // PHASE 6: Execute AI job immediately (synchronous for now)
     // TODO: Move to background queue in future phase
-    await this.executeAiJob(aiJob.id);
+    await this.executeAiJob(aiJob.id, userInstructions);
 
     return {
       jobId: aiJob.id,
@@ -132,8 +138,11 @@ export class AiJobsService {
    * - Locked sections NEVER sent to AI
    * - Locked sections preserved byte-for-byte in proposal
    * - Section-level diff enables granular accept/reject
+   * 
+   * @param jobId - AI job ID
+   * @param userInstructions - Optional custom instructions from Edit Mode
    */
-  private async executeAiJob(jobId: string): Promise<void> {
+  private async executeAiJob(jobId: string, userInstructions?: string): Promise<void> {
     try {
       // Update status to RUNNING
       await this.prisma.aIJob.update({
@@ -173,8 +182,9 @@ export class AiJobsService {
       const sectionProposals = await this.generateSectionProposals(
         unlockedSections,
         allSections,
-        aiJob.jd.rawText,
+        aiJob.jd?.rawText || null,
         aiJob.mode,
+        userInstructions,
       );
 
       // GOAL 3: Assemble full LaTeX with proposed changes
@@ -422,8 +432,9 @@ Please generate an optimized version of this resume tailored for the above job d
   private async generateSectionProposals(
     unlockedSections: any[],
     allSections: any[],
-    jdRawText: string,
+    jdRawText: string | null,
     mode: string,
+    userInstructions?: string,
   ): Promise<SectionProposal[]> {
     const proposals: SectionProposal[] = [];
 
@@ -447,6 +458,7 @@ Please generate an optimized version of this resume tailored for the above job d
           sectionType,
           jdRawText,
           mode,
+          userInstructions,
         );
 
         proposals.push({
@@ -466,21 +478,29 @@ Please generate an optimized version of this resume tailored for the above job d
    * 
    * Sends only this section's content to AI (not full resume)
    * This enables section-level isolation and better prompt control
+   * 
+   * @param userInstructions - Custom instructions from Edit Mode (optional)
    */
   private async generateSectionContent(
     originalContent: string,
     sectionType: SectionType,
-    jdRawText: string,
+    jdRawText: string | null,
     mode: string,
+    userInstructions?: string,
   ): Promise<string> {
     try {
       const modeInstructions = this.getModeInstructions(mode);
 
+      // Build custom instructions context if provided
+      const customInstructionsContext = userInstructions 
+        ? `\n\nUSER CUSTOM INSTRUCTIONS (HIGHEST PRIORITY):\n${userInstructions}\n\nFollow these custom instructions while maintaining LaTeX safety rules.`
+        : '';
+
       const systemPrompt = `You are an expert resume optimization assistant specializing in tailoring resume sections for specific job descriptions.
 
-Your task: Optimize the ${sectionType} section of a resume to better match a job description.
+Your task: Optimize the ${sectionType} section of a resume${jdRawText ? ' to better match a job description' : ''}.
 
-${modeInstructions}
+${modeInstructions}${customInstructionsContext}
 
 CRITICAL LATEX PRESERVATION RULES (MUST FOLLOW):
 1. NEVER remove or modify ANY LaTeX commands (\\section, \\textbf, \\href, \\item, etc.)
@@ -510,17 +530,16 @@ WHAT YOU MUST NEVER CHANGE:
 
 IF UNCERTAIN: Return the original content unchanged rather than risk breaking LaTeX.`;
 
-      const userPrompt = `Job Description:
-\`\`\`
-${jdRawText}
-\`\`\`
+      const jdContext = jdRawText 
+        ? `Job Description:\n\`\`\`\n${jdRawText}\n\`\`\`\n\n`
+        : '';
 
-Current ${sectionType} Section:
+      const userPrompt = `${jdContext}Current ${sectionType} Section:
 \`\`\`latex
 ${originalContent}
 \`\`\`
 
-Optimize this section to better match the job description. Return ONLY the LaTeX code for this section. Preserve ALL LaTeX commands exactly.`;
+Optimize this section${jdRawText ? ' to better match the job description' : ''}. Return ONLY the LaTeX code for this section. Preserve ALL LaTeX commands exactly.`;
 
       // Call AI API with conservative settings
       const response = await this.aiClient.chat.completions.create({
@@ -1019,5 +1038,136 @@ Optimize this section to better match the job description. Return ONLY the LaTeX
       createdAt: job.createdAt.toISOString(),
       updatedAt: job.updatedAt.toISOString(),
     }));
+  }
+
+  /**
+   * Chat endpoint for conversational AI assistance
+   * 
+   * Provides resume advice without modifying content.
+   * Stateless - conversation history managed by frontend.
+   * 
+   * SAFETY: This NEVER modifies resume versions.
+   * It's informational only - advice, suggestions, brainstorming.
+   */
+  async chat(chatDto: SendChatDto, userId: string): Promise<ChatResponseDto> {
+    const { projectId, message, resumeContext, jdContext, conversationHistory } = chatDto;
+
+    // Verify user owns the project
+    const project = await this.prisma.resumeProject.findUnique({
+      where: { id: projectId },
+    });
+
+    if (!project) {
+      throw new NotFoundException(`Project ${projectId} not found`);
+    }
+
+    if (project.userId !== userId) {
+      throw new ForbiddenException('You do not have access to this project');
+    }
+
+    try {
+      // Build system prompt
+      const systemPrompt = `You are an expert resume consultant providing friendly, conversational advice.
+
+Your role:
+- Answer questions about resume optimization in a natural, conversational way
+- Suggest improvements and best practices
+- Help brainstorm ways to present experience
+- Explain resume gaps and how to address them
+- Provide job-specific tailoring advice
+
+IMPORTANT CONSTRAINTS:
+- You are in CHAT MODE - you provide ADVICE only
+- You CANNOT and WILL NOT modify the resume directly
+- If user wants changes, explain what they could do
+- Suggest specific phrases or approaches, but don't apply them
+- You can show code examples, but they won't auto-apply
+
+TONE & FORMATTING:
+- Be conversational and friendly, like you're chatting with a colleague
+- Use simple markdown: **bold**, *italic*, bullet lists, numbered lists
+- AVOID tables - they don't render well in chat
+- Use bullet points instead of tables for comparisons
+- Keep responses concise and scannable
+- Use emojis sparingly (1-2 per response max)
+- Break up long responses with clear headings
+
+Be helpful, specific, and actionable. Use examples when helpful.`;
+
+      // Build conversation context
+      const messages: any[] = [
+        { role: 'system', content: systemPrompt },
+      ];
+
+      // Add conversation history if provided
+      if (conversationHistory && conversationHistory.length > 0) {
+        messages.push(...conversationHistory.map(msg => ({
+          role: msg.role,
+          content: msg.content,
+        })));
+      }
+
+      // Build context-aware user message
+      let contextualMessage = message;
+      
+      if (resumeContext || jdContext) {
+        let contextPrefix = '';
+        
+        if (resumeContext) {
+          contextPrefix += `\n\nCurrent Resume Context:\n\`\`\`latex\n${resumeContext.substring(0, 2000)}\n\`\`\`\n`;
+        }
+        
+        if (jdContext) {
+          contextPrefix += `\n\nJob Description Context:\n\`\`\`\n${jdContext.substring(0, 1000)}\n\`\`\`\n`;
+        }
+        
+        contextualMessage = `${contextPrefix}\n\nUser Question: ${message}`;
+      }
+
+      messages.push({
+        role: 'user',
+        content: contextualMessage,
+      });
+
+      // Call AI
+      const response = await this.aiClient.chat.completions.create({
+        model: 'openai/gpt-oss-20b',
+        messages,
+        temperature: 0.7,
+        max_tokens: 2048, // Increased to allow reasoning models to complete
+      });
+
+      // Check both content and reasoning_content (some models use reasoning mode)
+      const messageObj = response.choices[0]?.message;
+      const assistantMessage = messageObj?.content || (messageObj as any)?.reasoning_content;
+      
+      if (!assistantMessage) {
+        console.error('No message content in AI response. Full response:', response);
+        throw new Error('AI did not return a valid response');
+      }
+
+      return {
+        message: assistantMessage,
+      };
+    } catch (error) {
+      console.error('Chat error details:', error);
+      
+      // Provide more specific error messages
+      if (error.message?.includes('API key')) {
+        throw new BadRequestException('AI service authentication failed');
+      }
+      
+      if (error.message?.includes('rate limit')) {
+        throw new BadRequestException('AI service rate limit exceeded. Please try again in a moment.');
+      }
+      
+      if (error.message?.includes('timeout')) {
+        throw new BadRequestException('AI service timeout. Please try again.');
+      }
+      
+      throw new BadRequestException(
+        error.message || 'Failed to process chat request. Please try again.'
+      );
+    }
   }
 }
