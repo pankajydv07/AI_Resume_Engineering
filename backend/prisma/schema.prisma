@@ -174,11 +174,12 @@ model JobDescription {
 /// - No synchronous AI calls
 ///
 /// PHASE 2 HARDENING: onDelete Restrict on all foreign key relations
+/// CHAT MODE: jdId is now optional to support chat-based editing without JD
 model AIJob {
   id            String      @id @default(uuid())
   projectId     String
   baseVersionId String
-  jdId          String
+  jdId          String?
   mode          AIMode
   status        AIJobStatus
   errorMessage  String?     @db.Text
@@ -188,7 +189,7 @@ model AIJob {
   // Relations with explicit delete behavior
   project         ResumeProject    @relation(fields: [projectId], references: [id], onDelete: Restrict)
   baseVersion     ResumeVersion    @relation(fields: [baseVersionId], references: [id], onDelete: Restrict)
-  jd              JobDescription   @relation(fields: [jdId], references: [id], onDelete: Restrict)
+  jd              JobDescription?  @relation(fields: [jdId], references: [id], onDelete: Restrict)
   proposedVersion ProposedVersion? // 1:1 relation (optional)
 }
 
