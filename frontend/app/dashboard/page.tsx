@@ -6,6 +6,14 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { handleHttpError, getErrorMessage, isRetryableError } from '@/lib/errorHandling';
 import { apiUrl } from '@/lib/api';
+import { GlassCard } from '@/components/ui/GlassCard';
+import { Button } from '@/components/ui/Button';
+import { FadeIn, SlideUp } from '@/components/ui/Animated';
+import { 
+  Plus, FileText, Clock, GitBranch, Upload, 
+  Sparkles, TrendingUp, CheckCircle, AlertCircle,
+  FolderOpen, Settings, ArrowRight
+} from 'lucide-react';
 
 /**
  * Dashboard Page (/dashboard)
@@ -216,269 +224,328 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-dark-950">
+      {/* Background gradients */}
+      <div className="fixed inset-0 -z-10">
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-primary-500/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/3 left-1/4 w-96 h-96 bg-secondary-500/10 rounded-full blur-3xl" />
+      </div>
+
       {/* Header */}
-      <header className="bg-white border-b border-gray-200">
+      <header className="glass border-b border-white/10 sticky top-0 z-40 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <h1 className="text-xl font-semibold text-gray-900">Resume Projects</h1>
+          <div className="flex items-center gap-4">
+            <Link href="/" className="flex items-center gap-2">
+              <div className="w-10 h-10 bg-gradient-primary rounded-lg flex items-center justify-center">
+                <Sparkles className="w-6 h-6 text-white" />
+              </div>
+              <span className="text-xl font-bold text-gradient">ResumeAI</span>
+            </Link>
+          </div>
           <UserButton afterSignOutUrl="/" />
         </div>
       </header>
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Create New Project Button */}
-        <div className="mb-6">
-          <button 
-            onClick={openCreateModal}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition"
-          >
-            Create New Resume Project
-          </button>
-        </div>
+        {/* Welcome Section */}
+        <FadeIn>
+          <div className="mb-8">
+            <h1 className="text-4xl font-bold mb-2">
+              Welcome back! 👋
+            </h1>
+            <p className="text-dark-300 text-lg">Let's get you hired</p>
+          </div>
+        </FadeIn>
+
+        {/* Quick Actions */}
+        <SlideUp delay={0.1}>
+          <GlassCard className="mb-8 p-8">
+            <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <button
+                onClick={openCreateModal}
+                className="glass-card p-6 hover:scale-105 transition-all duration-200 hover:shadow-glow group text-left"
+              >
+                <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <Plus className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="font-semibold mb-1">New Project</h3>
+                <p className="text-sm text-dark-400">Create a new resume project</p>
+              </button>
+
+              <button
+                onClick={() => setCreationMode('upload')}
+                className="glass-card p-6 hover:scale-105 transition-all duration-200 hover:shadow-glow-secondary group text-left"
+              >
+                <div className="w-12 h-12 bg-gradient-secondary rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                  <Upload className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="font-semibold mb-1">Upload Resume</h3>
+                <p className="text-sm text-dark-400">Start from existing file</p>
+              </button>
+
+              <div className="glass-card p-6 opacity-60 text-left">
+                <div className="w-12 h-12 bg-gradient-accent rounded-xl flex items-center justify-center mb-4">
+                  <Sparkles className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="font-semibold mb-1">AI Generate</h3>
+                <p className="text-sm text-dark-400">Coming soon</p>
+              </div>
+            </div>
+          </GlassCard>
+        </SlideUp>
 
         {/* Error Display */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <p className="text-sm text-red-800">
-              <strong>Error:</strong> {error}
-            </p>
-          </div>
+          <SlideUp delay={0.2}>
+            <GlassCard className="mb-6 bg-red-500/10 border-red-500/20">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-red-300">Error</p>
+                  <p className="text-sm text-red-200 mt-1">{error}</p>
+                </div>
+              </div>
+            </GlassCard>
+          </SlideUp>
         )}
 
         {/* Loading State */}
         {isLoading && (
-          <div className="bg-white rounded-lg shadow p-8">
-            <div className="flex items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-600 border-t-transparent"></div>
-              <span className="ml-3 text-gray-600">Loading projects...</span>
-            </div>
-          </div>
+          <SlideUp delay={0.2}>
+            <GlassCard>
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-2 border-primary-500 border-t-transparent"></div>
+                <span className="ml-4 text-dark-300">Loading projects...</span>
+              </div>
+            </GlassCard>
+          </SlideUp>
         )}
 
         {/* Empty State */}
         {!isLoading && !error && projects.length === 0 && (
-          <div className="bg-white rounded-lg shadow">
-            <div className="p-12 text-center">
-              <svg
-                className="mx-auto h-12 w-12 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-              <h3 className="mt-4 text-lg font-medium text-gray-900">No projects yet</h3>
-              <p className="mt-2 text-sm text-gray-500">
-                Get started by creating your first resume project.
-              </p>
-              <div className="mt-6">
-                <button
-                  onClick={openCreateModal}
-                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition"
-                >
-                  Create Your First Project
-                </button>
+          <SlideUp delay={0.2}>
+            <GlassCard className="text-center py-16">
+              <div className="w-20 h-20 bg-gradient-primary rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <FileText className="w-10 h-10 text-white" />
               </div>
-            </div>
-          </div>
+              <h3 className="text-2xl font-bold mb-2">No projects yet</h3>
+              <p className="text-dark-300 mb-6 max-w-md mx-auto">
+                Get started by creating your first resume project and let AI help you land your dream job.
+              </p>
+              <Button onClick={openCreateModal} variant="primary" size="lg">
+                <Plus className="w-5 h-5 mr-2" />
+                Create Your First Project
+              </Button>
+            </GlassCard>
+          </SlideUp>
         )}
 
-        {/* Projects List */}
+        {/* Projects Grid */}
         {!isLoading && !error && projects.length > 0 && (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <ul className="divide-y divide-gray-200">
-              {projects.map((project) => (
-                <li key={project.projectId}>
-                  <Link
-                    href={`/projects/${project.projectId}`}
-                    className="block hover:bg-gray-50 transition"
-                  >
-                    <div className="px-6 py-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <h3 className="text-lg font-medium text-gray-900">
-                            {project.name}
-                          </h3>
-                          <p className="text-sm text-gray-500 mt-1">
-                            Last updated: {formatDate(project.updatedAt)}
-                          </p>
+          <>
+            <SlideUp delay={0.2}>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold">Your Projects</h2>
+                <span className="text-dark-400">{projects.length} {projects.length === 1 ? 'project' : 'projects'}</span>
+              </div>
+            </SlideUp>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {projects.map((project, index) => (
+                <SlideUp key={project.projectId} delay={0.3 + index * 0.05}>
+                  <Link href={`/projects/${project.projectId}`}>
+                    <GlassCard className="group cursor-pointer h-full">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                          <FileText className="w-6 h-6 text-white" />
                         </div>
-                        <div className="ml-4 flex items-center">
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                            {project.versionCount} {project.versionCount === 1 ? 'version' : 'versions'}
-                          </span>
-                          <svg
-                            className="ml-3 h-5 w-5 text-gray-400"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M9 5l7 7-7 7"
-                            />
-                          </svg>
+                        <ArrowRight className="w-5 h-5 text-dark-400 group-hover:translate-x-1 group-hover:text-primary-400 transition-all" />
+                      </div>
+
+                      <h3 className="text-lg font-semibold mb-2 line-clamp-2 group-hover:text-primary-400 transition-colors">
+                        {project.name}
+                      </h3>
+
+                      <div className="space-y-2 text-sm text-dark-400">
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-4 h-4" />
+                          <span>{formatDate(project.updatedAt)}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <GitBranch className="w-4 h-4" />
+                          <span>{project.versionCount} {project.versionCount === 1 ? 'version' : 'versions'}</span>
                         </div>
                       </div>
-                    </div>
+
+                      <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between">
+                        <span className="text-xs text-dark-500">Click to open</span>
+                        <Settings className="w-4 h-4 text-dark-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                    </GlassCard>
                   </Link>
-                </li>
+                </SlideUp>
               ))}
-            </ul>
-          </div>
+            </div>
+          </>
         )}
       </main>
 
       {/* Create Project Modal */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
-              Create New Resume Project
-            </h2>
-
-            <form onSubmit={handleCreateProject}>
-              {/* Project Name Input */}
-              <div className="mb-4">
-                <label htmlFor="projectName" className="block text-sm font-medium text-gray-700 mb-2">
-                  Project Name
-                </label>
-                <input
-                  id="projectName"
-                  type="text"
-                  value={projectName}
-                  onChange={(e) => setProjectName(e.target.value)}
-                  disabled={isCreating || isUploading}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-                  placeholder="e.g., Software Engineer Resume"
-                  autoFocus
-                />
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <FadeIn>
+            <GlassCard className="max-w-md w-full p-0 overflow-hidden">
+              <div className="p-6 border-b border-white/10">
+                <h2 className="text-2xl font-bold">
+                  Create New Project
+                </h2>
               </div>
 
-              {/* Creation Mode Selection */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  How would you like to start?
-                </label>
-                <div className="space-y-2">
-                  <label className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition">
-                    <input
-                      type="radio"
-                      name="creationMode"
-                      value="scratch"
-                      checked={creationMode === 'scratch'}
-                      onChange={() => {
-                        setCreationMode('scratch');
-                        setUploadFile(null);
-                        setCreateError(null);
-                      }}
-                      disabled={isCreating || isUploading}
-                      className="mr-3"
-                    />
-                    <div>
-                      <div className="font-medium text-gray-900">Build from scratch</div>
-                      <div className="text-xs text-gray-500">Start with a blank LaTeX template</div>
-                    </div>
-                  </label>
-                  
-                  <label className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition">
-                    <input
-                      type="radio"
-                      name="creationMode"
-                      value="upload"
-                      checked={creationMode === 'upload'}
-                      onChange={() => {
-                        setCreationMode('upload');
-                        setCreateError(null);
-                      }}
-                      disabled={isCreating || isUploading}
-                      className="mr-3"
-                    />
-                    <div>
-                      <div className="font-medium text-gray-900">Upload existing resume</div>
-                      <div className="text-xs text-gray-500">PDF or LaTeX (.tex) file</div>
-                    </div>
-                  </label>
-                </div>
-              </div>
-
-              {/* File Upload (shown when upload mode selected) */}
-              {creationMode === 'upload' && (
-                <div className="mb-4">
-                  <label htmlFor="resumeFile" className="block text-sm font-medium text-gray-700 mb-2">
-                    Resume File
+              <form onSubmit={handleCreateProject} className="p-6">
+                {/* Project Name Input */}
+                <div className="mb-6">
+                  <label htmlFor="projectName" className="block text-sm font-medium mb-2">
+                    Project Name
                   </label>
                   <input
-                    id="resumeFile"
-                    type="file"
-                    accept=".pdf,.tex,application/pdf,application/x-tex,text/x-tex"
-                    onChange={handleFileChange}
+                    id="projectName"
+                    type="text"
+                    value={projectName}
+                    onChange={(e) => setProjectName(e.target.value)}
                     disabled={isCreating || isUploading}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    className="input-primary"
+                    placeholder="e.g., Software Engineer Resume"
+                    autoFocus
                   />
-                  {uploadFile && (
-                    <p className="mt-2 text-sm text-gray-600">
-                      Selected: {uploadFile.name} ({(uploadFile.size / 1024).toFixed(1)} KB)
-                    </p>
-                  )}
-                  {isUploading && (
-                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800">
-                      <div className="flex items-center gap-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
-                        <span>
-                          {uploadFile?.name.endsWith('.pdf') 
-                            ? 'Extracting text and generating LaTeX...' 
-                            : 'Processing LaTeX file...'}
-                        </span>
+                </div>
+
+                {/* Creation Mode Selection */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium mb-3">
+                    How would you like to start?
+                  </label>
+                  <div className="space-y-3">
+                    <label className="flex items-start gap-3 p-4 glass-card cursor-pointer hover:bg-white/10 transition-colors">
+                      <input
+                        type="radio"
+                        name="creationMode"
+                        value="scratch"
+                        checked={creationMode === 'scratch'}
+                        onChange={() => {
+                          setCreationMode('scratch');
+                          setUploadFile(null);
+                          setCreateError(null);
+                        }}
+                        disabled={isCreating || isUploading}
+                        className="mt-1"
+                      />
+                      <div className="flex-1">
+                        <div className="font-medium flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-primary-400" />
+                          Build from scratch
+                        </div>
+                        <div className="text-xs text-dark-400 mt-1">Start with a blank LaTeX template</div>
                       </div>
+                    </label>
+                    
+                    <label className="flex items-start gap-3 p-4 glass-card cursor-pointer hover:bg-white/10 transition-colors">
+                      <input
+                        type="radio"
+                        name="creationMode"
+                        value="upload"
+                        checked={creationMode === 'upload'}
+                        onChange={() => {
+                          setCreationMode('upload');
+                          setCreateError(null);
+                        }}
+                        disabled={isCreating || isUploading}
+                        className="mt-1"
+                      />
+                      <div className="flex-1">
+                        <div className="font-medium flex items-center gap-2">
+                          <Upload className="w-4 h-4 text-secondary-400" />
+                          Upload existing resume
+                        </div>
+                        <div className="text-xs text-dark-400 mt-1">PDF or LaTeX (.tex) file</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                {/* File Upload */}
+                {creationMode === 'upload' && (
+                  <div className="mb-6">
+                    <label htmlFor="resumeFile" className="block text-sm font-medium mb-2">
+                      Resume File
+                    </label>
+                    <input
+                      id="resumeFile"
+                      type="file"
+                      accept=".pdf,.tex,application/pdf,application/x-tex,text/x-tex"
+                      onChange={handleFileChange}
+                      disabled={isCreating || isUploading}
+                      className="w-full px-3 py-2 glass rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-500/20 file:text-primary-300 hover:file:bg-primary-500/30"
+                    />
+                    {uploadFile && (
+                      <p className="mt-2 text-sm text-dark-400">
+                        Selected: {uploadFile.name} ({(uploadFile.size / 1024).toFixed(1)} KB)
+                      </p>
+                    )}
+                    {isUploading && (
+                      <div className="mt-3 p-3 glass-card bg-primary-500/10 border-primary-500/20">
+                        <div className="flex items-center gap-2 text-sm">
+                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary-400 border-t-transparent"></div>
+                          <span className="text-primary-300">
+                            {uploadFile?.name.endsWith('.pdf') 
+                              ? 'Extracting text and generating LaTeX...' 
+                              : 'Processing LaTeX file...'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Error Display */}
+                {createError && (
+                  <div className="mb-6 p-3 glass-card bg-red-500/10 border-red-500/20">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+                      <p className="text-sm text-red-300">{createError}</p>
                     </div>
-                  )}
-                </div>
-              )}
+                  </div>
+                )}
 
-              {/* Error Display */}
-              {createError && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-sm text-red-800">{createError}</p>
+                {/* Action Buttons */}
+                <div className="flex gap-3 justify-end">
+                  <Button
+                    type="button"
+                    onClick={closeCreateModal}
+                    disabled={isCreating || isUploading}
+                    variant="ghost"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={
+                      isCreating || 
+                      isUploading ||
+                      !projectName.trim() ||
+                      (creationMode === 'upload' && !uploadFile)
+                    }
+                    variant="primary"
+                    isLoading={isCreating || isUploading}
+                  >
+                    {!(isCreating || isUploading) && <Plus className="w-4 h-4 mr-2" />}
+                    Create Project
+                  </Button>
                 </div>
-              )}
-
-              {/* Action Buttons */}
-              <div className="flex gap-3 justify-end">
-                <button
-                  type="button"
-                  onClick={closeCreateModal}
-                  disabled={isCreating || isUploading}
-                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg font-medium hover:bg-gray-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={
-                    isCreating || 
-                    isUploading ||
-                    !projectName.trim() ||
-                    (creationMode === 'upload' && !uploadFile)
-                  }
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {(isCreating || isUploading) && (
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                  )}
-                  {isCreating || isUploading ? 'Creating...' : 'Create Project'}
-                </button>
-              </div>
-            </form>
-          </div>
+              </form>
+            </GlassCard>
+          </FadeIn>
         </div>
       )}
     </div>

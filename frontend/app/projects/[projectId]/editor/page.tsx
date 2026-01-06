@@ -24,7 +24,13 @@ export default function EditorPage() {
   const versionId = searchParams.get('versionId');
 
   return (
-    <div className="min-h-screen bg-zinc-950">
+    <div className="min-h-screen bg-dark-950">
+      {/* Background gradient accents */}
+      <div className="fixed inset-0 -z-10 pointer-events-none">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-primary-500/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-secondary-500/5 rounded-full blur-3xl" />
+      </div>
+      
       <EditorWorkspace projectId={projectId} initialVersionId={versionId} />
     </div>
   );

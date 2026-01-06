@@ -40,24 +40,36 @@ interface LaTeXEditorProps {
 export function LaTeXEditor({ value, onChange, isDirty, isLoading }: LaTeXEditorProps) {
 
   return (
-    <div className="flex flex-col h-full bg-zinc-900/40 backdrop-blur-sm">
+    <div className="flex flex-col h-full bg-gradient-to-br from-dark-950 via-dark-900/50 to-dark-950">
       {/* PHASE 7.2: Section Header with Helper Text */}
-      <div className="bg-zinc-900/60 backdrop-blur-md border-b border-white/10 px-4 py-3">
-        <div className="flex items-center justify-between mb-1">
-          <h2 className="text-sm font-semibold text-zinc-200">Resume Editor</h2>
+      <div className="glass border-b border-white/5 px-6 py-3.5">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center shadow-glow">
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-white">LaTeX Editor</h2>
+              <p className="text-xs text-dark-400 mt-0.5">
+                Edit your resume code with syntax highlighting
+              </p>
+            </div>
+          </div>
           {isDirty && (
-            <span className="text-xs text-orange-400 font-medium">
-              • Unsaved Changes
-            </span>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-500/20 border border-orange-500/30">
+              <div className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse"></div>
+              <span className="text-xs text-orange-300 font-medium">
+                Unsaved Changes
+              </span>
+            </div>
           )}
         </div>
-        <p className="text-xs text-zinc-400">
-          Edit your resume LaTeX code. Changes are saved manually as new versions.
-        </p>
       </div>
 
-      {/* Editor Content */}
-      <div className="flex-1 relative">
+      {/* Editor Content with subtle border */}
+      <div className="flex-1 relative border-t border-white/5">
         <MonacoLatexEditor
           value={value}
           onChange={onChange}

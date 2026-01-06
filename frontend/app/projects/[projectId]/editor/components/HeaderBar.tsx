@@ -251,13 +251,13 @@ export function HeaderBar({
   return (
     <>
       {/* Premium Dense Header - Single 56px bar */}
-      <header className="sticky top-0 z-40 h-14 flex items-center justify-between px-3 bg-gradient-to-b from-zinc-950/95 to-zinc-950/80 backdrop-blur-2xl border-b border-white/[0.03] shadow-[0_1px_0_0_rgba(255,255,255,0.02)]">
+      <header className="sticky top-0 z-40 h-14 flex items-center justify-between px-4 glass border-b border-white/10 backdrop-blur-xl shadow-lg">
         {/* Left Section - Navigation & Context */}
         <div className="flex items-center gap-2">
           {/* Back Button - Minimal */}
           <Link
             href={`/projects/${projectId}`}
-            className="p-1.5 -ml-1 text-zinc-600 hover:text-zinc-400 hover:bg-white/[0.03] rounded-md transition-all"
+            className="p-1.5 -ml-1 text-dark-400 hover:text-white hover:bg-white/10 rounded-md transition-all"
             title="Back"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
@@ -271,15 +271,15 @@ export function HeaderBar({
               type="button"
               onClick={() => setIsVersionDropdownOpen(!isVersionDropdownOpen)}
               disabled={isLoadingVersions || versions.length === 0}
-              className="group flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-zinc-300 hover:text-zinc-100 bg-white/[0.06] hover:bg-white/[0.10] border border-white/[0.08] rounded-md transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              className="group flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-dark-200 hover:text-white glass-card hover:shadow-glow transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <span className="max-w-[120px] truncate">{formatVersionLabel(currentVersion)}</span>
-              <span className={`text-zinc-500 transition-transform ${isVersionDropdownOpen ? 'rotate-180' : ''}`}>▼</span>
+              <span className={`text-dark-400 transition-transform ${isVersionDropdownOpen ? 'rotate-180' : ''}`}>▼</span>
             </button>
 
             {/* Version Dropdown - Premium */}
             {isVersionDropdownOpen && versions.length > 0 && (
-              <div className="absolute left-0 mt-1.5 w-72 bg-zinc-900/98 backdrop-blur-2xl border border-white/[0.06] rounded-lg shadow-2xl overflow-hidden z-50 animate-slide-in-top">
+              <div className="absolute left-0 mt-1.5 w-72 glass-card backdrop-blur-2xl rounded-lg shadow-2xl overflow-hidden z-50 animate-slide-in-top">
                 <div className="max-h-64 overflow-y-auto py-0.5">
                   {versions.map((version) => (
                     <button
@@ -288,23 +288,23 @@ export function HeaderBar({
                       onClick={() => handleVersionSwitch(version.versionId)}
                       className={`w-full text-left px-3 py-2 text-xs transition-colors ${
                         version.versionId === currentVersionId
-                          ? 'bg-blue-500/10 text-blue-300'
-                          : 'text-zinc-300 hover:bg-white/[0.03]'
+                          ? 'bg-primary-500/20 text-primary-300'
+                          : 'text-dark-200 hover:bg-white/10'
                       }`}
                     >
                       <div className="flex items-center justify-between">
                         <span className="font-mono">{formatVersionDropdown(version)}</span>
                         {version.status === 'ACTIVE' && (
-                          <span className="text-[9px] px-1.5 py-0.5 bg-emerald-500/15 text-emerald-400 rounded font-medium">Active</span>
+                          <span className="text-[9px] px-1.5 py-0.5 bg-accent-500/20 text-accent-400 rounded font-medium">Active</span>
                         )}
                         {version.status === 'COMPILED' && (
-                          <span className="text-[9px] px-1.5 py-0.5 bg-blue-500/15 text-blue-400 rounded font-medium">Ready</span>
+                          <span className="text-[9px] px-1.5 py-0.5 bg-primary-500/20 text-primary-400 rounded font-medium">Ready</span>
                         )}
                       </div>
                     </button>
                   ))}
                 </div>
-                <div className="px-3 py-1.5 text-[10px] text-zinc-600 border-t border-white/[0.03] bg-zinc-950/80">
+                <div className="px-3 py-1.5 text-[10px] text-dark-400 border-t border-white/10 bg-dark-900/80">
                   {versions.length} version{versions.length !== 1 ? 's' : ''}
                 </div>
               </div>
@@ -312,13 +312,13 @@ export function HeaderBar({
           </div>
 
           {/* Panel Mode Toggle - Inline Segmented Control */}
-          <div className="flex items-center gap-1 bg-white/[0.06] border border-white/[0.08] rounded-md p-1">
+          <div className="flex items-center gap-1 glass rounded-lg p-1">
             <button
               onClick={() => onPanelModeChange('pdf')}
               className={`px-3 py-1 text-sm font-medium rounded transition-all ${
                 panelMode === 'pdf'
-                  ? 'bg-white/[0.10] text-zinc-100 shadow-sm'
-                  : 'text-zinc-400 hover:text-zinc-300 hover:bg-white/[0.05]'
+                  ? 'bg-primary-500/20 text-white shadow-glow'
+                  : 'text-dark-300 hover:text-white hover:bg-white/10'
               }`}
             >
               PDF Preview
@@ -327,8 +327,8 @@ export function HeaderBar({
               onClick={() => onPanelModeChange('ai')}
               className={`px-3 py-1 text-sm font-medium rounded transition-all ${
                 panelMode === 'ai'
-                  ? 'bg-white/[0.10] text-zinc-100 shadow-sm'
-                  : 'text-zinc-400 hover:text-zinc-300 hover:bg-white/[0.05]'
+                  ? 'bg-secondary-500/20 text-white shadow-glow-secondary'
+                  : 'text-dark-300 hover:text-white hover:bg-white/10'
               }`}
             >
               AI Assistant
@@ -385,7 +385,7 @@ export function HeaderBar({
           type="button"
           onClick={handleSave}
           disabled={!isDirty || isLoading || !currentVersionId}
-          className="px-4 py-1.5 text-sm font-medium text-zinc-300 hover:text-zinc-100 bg-white/[0.06] hover:bg-white/[0.10] border border-white/[0.08] rounded-md transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          className="px-4 py-1.5 text-sm font-medium text-dark-200 hover:text-white glass-card hover:shadow-glow rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           title={isDirty ? 'Save changes (Ctrl+S)' : 'No unsaved changes'}
         >
           {isSaving ? 'Saving...' : 'Save'}
@@ -400,8 +400,8 @@ export function HeaderBar({
               handleCompile();
             }}
             containerClassName="rounded-md"
-            className={`bg-gradient-to-br from-emerald-500 to-emerald-600 text-white px-5 py-1.5 text-sm font-semibold ${
-              (!currentVersionId || isCompiling || isLoading) ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
+            className={`bg-gradient-primary text-white px-5 py-1.5 text-sm font-semibold rounded-lg shadow-glow ${
+              (!currentVersionId || isCompiling || isLoading) ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:scale-105'
             }`}
             duration={1}
           >
@@ -410,7 +410,7 @@ export function HeaderBar({
         </div>
 
         {/* Divider - Subtle */}
-        <div className="w-px h-4 bg-white/[0.04]" />
+        <div className="w-px h-4 bg-white/10" />
 
         {/* Download PDF - Secondary */}
         <button

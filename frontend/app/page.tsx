@@ -1,5 +1,11 @@
 import Link from "next/link";
 import { currentUser } from "@clerk/nextjs/server";
+import { Hero } from "./components/Hero";
+import { Features } from "./components/Features";
+import { HowItWorks } from "./components/HowItWorks";
+import { Stats } from "./components/Stats";
+import { CTA } from "./components/CTA";
+import { Navbar } from "./components/Navbar";
 
 /**
  * Landing Page (/)
@@ -21,40 +27,29 @@ export default async function Home() {
   const user = await currentUser();
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-2xl mx-auto px-4 py-16 text-center">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">
-          JD-Aware Resume Engineering
-        </h1>
-        <p className="text-xl text-gray-600 mb-8">
-          Generate job-description-specific resume versions while preserving LaTeX safety, version control, and complete auditability.
-        </p>
-        <div className="flex gap-4 justify-center">
-          {user ? (
-            <Link
-              href="/dashboard"
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition"
-            >
-              Go to Dashboard
-            </Link>
-          ) : (
-            <>
-              <Link
-                href="/sign-up"
-                className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition"
-              >
-                Get Started
-              </Link>
-              <Link
-                href="/sign-in"
-                className="bg-gray-200 text-gray-800 px-6 py-3 rounded-lg font-medium hover:bg-gray-300 transition"
-              >
-                Sign In
-              </Link>
-            </>
-          )}
-        </div>
+    <main className="min-h-screen bg-dark-950 overflow-hidden">
+      {/* Background gradients */}
+      <div className="fixed inset-0 -z-10">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary-500/20 rounded-full blur-3xl" />
+        <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-secondary-500/20 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-1/2 w-96 h-96 bg-accent-500/10 rounded-full blur-3xl" />
       </div>
+
+      <Navbar isAuthenticated={!!user} />
+      <Hero isAuthenticated={!!user} />
+      <HowItWorks />
+      <Features />
+      <Stats />
+      <CTA isAuthenticated={!!user} />
+      
+      {/* Footer */}
+      <footer className="border-t border-white/10 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center text-dark-400">
+            <p>&copy; 2026 AI Resume Engineering. Built with 💜 for job seekers.</p>
+          </div>
+        </div>
+      </footer>
     </main>
   );
 }

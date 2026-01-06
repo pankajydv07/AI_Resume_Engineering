@@ -143,7 +143,7 @@ export function EditorWorkspace({ projectId, initialVersionId }: EditorWorkspace
   }, [initialVersionId, loadVersion]);
 
   return (
-    <div className="flex flex-col h-screen bg-zinc-950">
+    <div className="flex flex-col h-screen bg-dark-950">
       {/* Unified Header Bar with glassmorphism */}
       <HeaderBar
         projectId={projectId}
@@ -160,30 +160,35 @@ export function EditorWorkspace({ projectId, initialVersionId }: EditorWorkspace
       />
       
       {/* Main Editor Layout: LEFT (Editor) | RIGHT (PDF or AI - mutually exclusive) */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Vertical separator with gradient */}
+        <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-primary-500/30 to-transparent z-20 pointer-events-none"></div>
+        
         {/* LEFT: LaTeX Editor or Empty State */}
-        <div className="w-1/2 border-r border-white/10">
+        <div className="w-1/2 border-r border-white/5">
           {!currentVersionId && !isLoading ? (
             /* Empty State - No Version Loaded */
-            <div className="flex h-full items-center justify-center bg-zinc-900/40 backdrop-blur-sm">
-              <div className="text-center max-w-md px-6">
-                <svg
-                  className="mx-auto h-12 w-12 text-zinc-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-                <h3 className="mt-4 text-base font-medium text-zinc-200">No Version Loaded</h3>
-                <p className="mt-2 text-sm text-zinc-400">
-                  Load a version using the selector above to begin editing.
-                </p>
+            <div className="flex h-full items-center justify-center bg-gradient-to-br from-dark-950 via-dark-900 to-dark-950 relative overflow-hidden">
+              {/* Animated background gradient */}
+              <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary-500/10 rounded-full blur-3xl animate-pulse"></div>
+              <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-secondary-500/10 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
+              
+              <div className="text-center max-w-md px-6 relative z-10">
+                <div className="glass-card p-8 rounded-2xl shadow-glow">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-primary flex items-center justify-center">
+                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-semibold text-white mb-2">No Version Loaded</h3>
+                  <p className="text-sm text-dark-400 mb-4">
+                    Load a version using the selector above to begin editing your resume.
+                  </p>
+                  <div className="flex items-center justify-center gap-2 text-xs text-dark-500">
+                    <div className="w-2 h-2 rounded-full bg-accent-500 animate-pulse"></div>
+                    <span>Ready to start</span>
+                  </div>
+                </div>
               </div>
             </div>
           ) : (
@@ -234,10 +239,10 @@ export function EditorWorkspace({ projectId, initialVersionId }: EditorWorkspace
 
       {/* Inline Loading Indicator - Non-blocking, shows only during initial load */}
       {isLoading && !currentVersionId && (
-        <div className="fixed bottom-20 right-4 z-40">
-          <div className="bg-zinc-900/95 backdrop-blur-md border border-zinc-700/50 px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-3">
-            <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
-            <span className="text-sm text-zinc-300">Loading version...</span>
+        <div className="fixed bottom-8 right-8 z-40 animate-slide-up">
+          <div className="glass-card px-5 py-3 rounded-xl shadow-glow flex items-center gap-3">
+            <div className="w-4 h-4 border-2 border-primary-400 border-t-transparent rounded-full animate-spin" />
+            <span className="text-sm font-medium text-white">Loading version...</span>
           </div>
         </div>
       )}

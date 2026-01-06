@@ -127,53 +127,76 @@ export function ProposalActions({
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4">
-      <h3 className="text-sm font-semibold text-gray-700 mb-3">
+    <div className="glass-card border border-white/10 rounded-xl p-6">
+      <h3 className="text-sm font-semibold text-dark-100 mb-3 flex items-center gap-2">
+        <svg className="w-5 h-5 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+        </svg>
         Review Proposal
       </h3>
 
-      <p className="text-sm text-gray-600 mb-4">
+      <p className="text-sm text-dark-300 mb-4">
         Accept this proposal to create a new resume version, or reject it to keep your current resume unchanged.
       </p>
 
-      {/* Warning */}
-      <div className="bg-amber-50 border border-amber-200 rounded p-3 mb-4">
-        <div className="text-xs text-amber-800">
+      {/* Warning - Dark theme */}
+      <div className="glass rounded-lg p-3 mb-4 border border-amber-500/30 bg-amber-500/10">
+        <div className="text-xs text-amber-400">
           <strong>⚠ Important:</strong> Accepting will create a new resume version. Your base resume will remain unchanged and accessible via version history.
         </div>
       </div>
 
       {/* Error Display */}
       {error && (
-        <div className="text-sm text-red-600 mb-4">
+        <div className="text-sm text-red-400 mb-4 glass-card p-3 border border-red-500/30 bg-red-500/10 rounded-lg">
           <strong>Error:</strong> {error}
         </div>
       )}
 
-      {/* Action Buttons */}
+      {/* Action Buttons - Dark theme */}
       <div className="flex gap-3">
         <button
           type="button"
           onClick={handleAccept}
           disabled={isAccepting || isRejecting}
-          className="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+          className="flex-1 px-4 py-3 text-sm font-medium text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg hover:from-green-600 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-glow"
         >
-          {isAccepting ? 'Accepting...' : '✓ Accept Proposal'}
+          {isAccepting ? (
+            <span className="flex items-center justify-center gap-2">
+              <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Accepting...
+            </span>
+          ) : (
+            '✓ Accept Proposal'
+          )}
         </button>
 
         <button
           type="button"
           onClick={handleReject}
           disabled={isAccepting || isRejecting}
-          className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded hover:bg-gray-200 disabled:bg-gray-50 disabled:cursor-not-allowed transition-colors"
+          className="flex-1 px-4 py-3 text-sm font-medium text-dark-100 glass border border-white/10 rounded-lg hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
         >
-          {isRejecting ? 'Rejecting...' : '✗ Reject Proposal'}
+          {isRejecting ? (
+            <span className="flex items-center justify-center gap-2">
+              <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Rejecting...
+            </span>
+          ) : (
+            '✗ Reject Proposal'
+          )}
         </button>
       </div>
 
       {/* Phase Notice */}
-      <div className="mt-3 pt-3 border-t border-gray-200">
-        <div className="text-xs text-gray-500">
+      <div className="mt-3 pt-3 border-t border-white/10">
+        <div className="text-xs text-dark-500">
           PHASE 6: Explicit user action required. No auto-apply.
         </div>
       </div>

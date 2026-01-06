@@ -266,31 +266,41 @@ export function ProposalModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white rounded-lg shadow-xl w-[95vw] h-[90vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-dark-950/90 backdrop-blur-md">
+      <div className="glass-card w-[95vw] h-[90vh] flex flex-col overflow-hidden border border-white/10 shadow-glass">
+        {/* Header - Matching website dark theme */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-dark-900/50">
           <div className="flex items-center space-x-4">
-            <h2 className="text-lg font-semibold text-gray-900">
-              AI Resume Proposal
-            </h2>
-            {/* GOAL 6: Chat toggle */}
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-primary rounded-xl flex items-center justify-center shadow-glow">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-gradient">
+                  AI Resume Proposal
+                </h2>
+                <p className="text-xs text-dark-400">Review and accept changes</p>
+              </div>
+            </div>
+            {/* GOAL 6: Chat toggle - Dark theme */}
             <button
               type="button"
               onClick={() => setShowChat(!showChat)}
-              className={`px-3 py-1 text-xs rounded transition-colors ${
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                 showChat
-                  ? 'bg-blue-600 text-white hover:bg-blue-700'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  ? 'bg-gradient-primary text-white shadow-glow'
+                  : 'glass text-dark-100 hover:bg-white/10'
               }`}
             >
-              {showChat ? '✓ Chat Active' : 'Refine with Chat'}
+              {showChat ? '✓ Chat Active' : '💬 Refine with Chat'}
             </button>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-dark-400 hover:text-dark-100 transition-colors p-2 hover:bg-white/5 rounded-lg"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -299,44 +309,53 @@ export function ProposalModal({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-hidden flex">
+        <div className="flex-1 overflow-hidden flex bg-dark-900">
           {/* Main proposal area */}
           <div className={`flex-1 overflow-hidden flex flex-col p-6 ${showChat ? 'w-2/3' : 'w-full'}`}>
           {isLoading && (
             <div className="flex items-center justify-center h-full">
-              <div className="text-gray-500">Loading proposal...</div>
+              <div className="text-center">
+                <div className="relative w-16 h-16 mx-auto mb-4">
+                  <div className="absolute inset-0 border-4 border-primary-500/20 rounded-full"></div>
+                  <div className="absolute inset-0 border-4 border-primary-500 rounded-full animate-spin border-t-transparent"></div>
+                </div>
+                <p className="text-dark-100 font-medium">Loading proposal...</p>
+                <p className="text-dark-400 text-sm mt-1">Preparing AI-generated changes</p>
+              </div>
             </div>
           )}
 
           {error && (
             <div className="flex flex-col items-center justify-center h-full space-y-4">
-              <div className="text-center max-w-md">
-                <svg
-                  className="mx-auto h-12 w-12 text-red-400 mb-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                  />
-                </svg>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Failed to Load Proposal</h3>
-                <p className="text-red-600 text-sm">{error}</p>
-                <p className="text-gray-500 text-sm mt-2">
+              <div className="text-center max-w-md glass-card p-8 border border-white/10">
+                <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg
+                    className="h-8 w-8 text-red-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-bold text-dark-100 mb-2">Failed to Load Proposal</h3>
+                <p className="text-red-400 text-sm font-medium mb-3">{error}</p>
+                <p className="text-dark-400 text-sm">
                   The AI job completed, but the proposal could not be retrieved. Please try again or check the AI Jobs page.
                 </p>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="mt-6 px-6 py-2 bg-dark-800 text-dark-100 rounded-lg hover:bg-dark-700 transition-all duration-200 shadow-lg text-sm font-medium border border-white/10"
+                >
+                  Close
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors text-sm"
-              >
-                Close
-              </button>
             </div>
           )}
 
@@ -346,29 +365,33 @@ export function ProposalModal({
               <div className="flex-1 overflow-auto mb-4">
                 {sectionProposals.length > 0 ? (
                   <div className="space-y-4">
-                    {/* Accept/Reject All Buttons */}
-                    <div className="flex items-center justify-between bg-gray-100 px-4 py-3 rounded-lg">
-                      <div className="text-sm text-gray-700">
-                        <span className="font-semibold">{acceptedSections.size}</span> of{' '}
-                        <span className="font-semibold">
-                          {sectionProposals.filter(p => p.changeType === 'modified').length}
-                        </span>{' '}
-                        modified sections selected
+                    {/* Accept/Reject All Buttons - Dark theme */}
+                    <div className="flex items-center justify-between glass-card px-6 py-4 border border-white/10">
+                      <div className="text-sm flex items-center gap-3">
+                        <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-glow">
+                          {acceptedSections.size}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-dark-100">Sections Selected</p>
+                          <p className="text-xs text-dark-400">
+                            {acceptedSections.size} of {sectionProposals.filter(p => p.changeType === 'modified').length} modified sections
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex space-x-2">
+                      <div className="flex space-x-3">
                         <button
                           type="button"
                           onClick={acceptAll}
-                          className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                          className="px-5 py-2.5 text-sm font-medium bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-glow"
                         >
-                          Accept All
+                          ✓ Accept All
                         </button>
                         <button
                           type="button"
                           onClick={rejectAll}
-                          className="px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                          className="px-5 py-2.5 text-sm font-medium bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-lg hover:from-red-600 hover:to-rose-700 transition-all duration-200 shadow-lg hover:shadow-glow"
                         >
-                          Reject All
+                          ✕ Reject All
                         </button>
                       </div>
                     </div>

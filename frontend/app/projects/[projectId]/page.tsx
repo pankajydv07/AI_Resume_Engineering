@@ -1,11 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
 import Link from 'next/link';
 import { handleHttpError, getErrorMessage } from '@/lib/errorHandling';
 import { apiUrl } from '@/lib/api';
+import { GlassCard } from '@/components/ui/GlassCard';
+import { Button } from '@/components/ui/Button';
+import { FadeIn, SlideUp } from '@/components/ui/Animated';
+import { 
+  FileCode, Briefcase, Zap, Calendar, GitBranch, 
+  ArrowLeft, Sparkles, Clock, ArrowRight, AlertCircle
+} from 'lucide-react';
 
 /**
  * Project Detail Page (/projects/{projectId})
@@ -43,6 +50,7 @@ interface VersionListItem {
 
 export default function ProjectPage() {
   const params = useParams();
+  const router = useRouter();
   const { getToken } = useAuth();
   const projectId = params.projectId as string;
 
@@ -127,18 +135,26 @@ export default function ProjectPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-dark-950">
+      {/* Background gradients */}
+      <div className="fixed inset-0 -z-10">
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-primary-500/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/3 left-1/4 w-96 h-96 bg-secondary-500/10 rounded-full blur-3xl" />
+      </div>
+
       {/* Header */}
-      <header className="bg-white border-b border-gray-200">
+      <header className="glass border-b border-white/10 sticky top-0 z-40 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center gap-4">
             <Link
               href="/dashboard"
-              className="text-gray-600 hover:text-gray-900 transition"
+              className="flex items-center gap-2 text-dark-300 hover:text-white transition group"
             >
-              ← Back to Dashboard
+              <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+              <span>Back to Dashboard</span>
             </Link>
-            <h1 className="text-xl font-semibold text-gray-900">
+            <div className="h-6 w-px bg-white/10" />
+            <h1 className="text-xl font-bold">
               {project ? project.name : 'Project Details'}
             </h1>
           </div>
@@ -149,176 +165,172 @@ export default function ProjectPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Loading State */}
         {isLoading && (
-          <div className="bg-white rounded-lg shadow p-8">
-            <div className="flex items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-600 border-t-transparent"></div>
-              <span className="ml-3 text-gray-600">Loading project...</span>
-            </div>
-          </div>
+          <FadeIn>
+            <GlassCard>
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-2 border-primary-500 border-t-transparent"></div>
+                <span className="ml-4 text-dark-300">Loading project...</span>
+              </div>
+            </GlassCard>
+          </FadeIn>
         )}
 
         {/* Error State */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-            <p className="text-sm text-red-800 mb-2">
-              <strong>Error:</strong> {error}
-            </p>
-            {error === 'Project not found' && (
-              <div className="mt-4">
-                <Link
-                  href="/dashboard"
-                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition text-sm"
-                >
-                  ← Back to Dashboard
-                </Link>
+          <SlideUp>
+            <GlassCard className="bg-red-500/10 border-red-500/20">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-6 h-6 text-red-400 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-semibold text-red-300 mb-1">Error</p>
+                  <p className="text-sm text-red-200">{error}</p>
+                  {error === 'Project not found' && (
+                    <div className="mt-4">
+                      <Link href="/dashboard">
+                        <Button variant="secondary">
+                          <ArrowLeft className="w-4 h-4 mr-2" />
+                          Back to Dashboard
+                        </Button>
+                      </Link>
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
+            </GlassCard>
+          </SlideUp>
         )}
 
         {/* Project Content */}
         {!isLoading && !error && project && (
-          <div className="space-y-6">
+          <div className="space-y-8">
             {/* Project Info Card */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                {project.name}
-              </h2>
-              
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-gray-500">Created:</span>
-                  <p className="text-gray-900 font-medium">{formatDate(project.createdAt)}</p>
+            <SlideUp>
+              <GlassCard>
+                <div className="flex items-start justify-between mb-6">
+                  <div>
+                    <h2 className="text-3xl font-bold mb-2">
+                      {project.name}
+                    </h2>
+                    <p className="text-dark-400">Your AI-powered resume project</p>
+                  </div>
+                  <div className="w-16 h-16 bg-gradient-primary rounded-2xl flex items-center justify-center">
+                    <Sparkles className="w-8 h-8 text-white" />
+                  </div>
                 </div>
-                <div>
-                  <span className="text-gray-500">Last Updated:</span>
-                  <p className="text-gray-900 font-medium">{formatDate(project.updatedAt)}</p>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-dark-400 text-sm">
+                      <Calendar className="w-4 h-4" />
+                      <span>Created</span>
+                    </div>
+                    <p className="text-lg font-medium">{formatDate(project.createdAt)}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-dark-400 text-sm">
+                      <Clock className="w-4 h-4" />
+                      <span>Last Updated</span>
+                    </div>
+                    <p className="text-lg font-medium">{formatDate(project.updatedAt)}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-dark-400 text-sm">
+                      <GitBranch className="w-4 h-4" />
+                      <span>Versions</span>
+                    </div>
+                    <p className="text-lg font-medium">{project.versionCount}</p>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-gray-500">Versions:</span>
-                  <p className="text-gray-900 font-medium">{project.versionCount}</p>
+              </GlassCard>
+            </SlideUp>
+
+            {/* Quick Actions */}
+            <SlideUp delay={0.1}>
+              <div>
+                <h3 className="text-xl font-bold mb-4">What would you like to do?</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Editor Link */}
+                  {versions.length > 0 ? (
+                    <Link href={`/projects/${projectId}/editor?versionId=${versions[0].versionId}`}>
+                      <GlassCard className="group cursor-pointer h-full hover:shadow-glow">
+                        <div className="w-14 h-14 bg-gradient-primary rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                          <FileCode className="w-7 h-7 text-white" />
+                        </div>
+                        <h3 className="text-xl font-semibold mb-2 group-hover:text-primary-400 transition-colors">
+                          Resume Editor
+                        </h3>
+                        <p className="text-dark-400 mb-4 text-sm">
+                          Edit resume versions, view LaTeX, and compile to PDF
+                        </p>
+                        <div className="flex items-center justify-between pt-4 border-t border-white/10">
+                          <span className="text-xs text-dark-500">
+                            {versions.length} version{versions.length !== 1 ? 's' : ''}
+                          </span>
+                          <ArrowRight className="w-5 h-5 text-primary-400 group-hover:translate-x-1 transition-transform" />
+                        </div>
+                      </GlassCard>
+                    </Link>
+                  ) : (
+                    <GlassCard className="opacity-60">
+                      <div className="w-14 h-14 bg-gradient-to-br from-dark-700 to-dark-600 rounded-xl flex items-center justify-center mb-4">
+                        <FileCode className="w-7 h-7 text-dark-400" />
+                      </div>
+                      <h3 className="text-xl font-semibold mb-2 text-dark-400">
+                        Resume Editor
+                      </h3>
+                      <p className="text-dark-500 mb-4 text-sm">
+                        No versions available yet
+                      </p>
+                      <div className="flex items-center gap-2 pt-4 border-t border-white/10">
+                        <AlertCircle className="w-4 h-4 text-dark-500" />
+                        <span className="text-xs text-dark-500">
+                          Try refreshing the page
+                        </span>
+                      </div>
+                    </GlassCard>
+                  )}
+
+                  {/* Job Descriptions Link */}
+                  <Link href={`/projects/${projectId}/jd`}>
+                    <GlassCard className="group cursor-pointer h-full hover:shadow-glow-secondary">
+                      <div className="w-14 h-14 bg-gradient-secondary rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <Briefcase className="w-7 h-7 text-white" />
+                      </div>
+                      <h3 className="text-xl font-semibold mb-2 group-hover:text-secondary-400 transition-colors">
+                        Job Descriptions
+                      </h3>
+                      <p className="text-dark-400 mb-4 text-sm">
+                        View all saved job descriptions for this project
+                      </p>
+                      <div className="flex items-center justify-between pt-4 border-t border-white/10">
+                        <span className="text-xs text-dark-500">Manage JDs</span>
+                        <ArrowRight className="w-5 h-5 text-secondary-400 group-hover:translate-x-1 transition-transform" />
+                      </div>
+                    </GlassCard>
+                  </Link>
+
+                  {/* AI Jobs Link */}
+                  <Link href={`/projects/${projectId}/ai-jobs`}>
+                    <GlassCard className="group cursor-pointer h-full hover:bg-accent-500/10">
+                      <div className="w-14 h-14 bg-gradient-accent rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <Zap className="w-7 h-7 text-white" />
+                      </div>
+                      <h3 className="text-xl font-semibold mb-2 group-hover:text-accent-400 transition-colors">
+                        AI Jobs
+                      </h3>
+                      <p className="text-dark-400 mb-4 text-sm">
+                        Track AI tailoring jobs and status
+                      </p>
+                      <div className="flex items-center justify-between pt-4 border-t border-white/10">
+                        <span className="text-xs text-dark-500">View status</span>
+                        <ArrowRight className="w-5 h-5 text-accent-400 group-hover:translate-x-1 transition-transform" />
+                      </div>
+                    </GlassCard>
+                  </Link>
                 </div>
               </div>
-            </div>
-
-            {/* Navigation Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Editor Link - Contract compliant navigation */}
-              {versions.length > 0 ? (
-                <Link
-                  href={`/projects/${projectId}/editor?versionId=${versions[0].versionId}`}
-                  className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition group"
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition">
-                      Resume Editor
-                    </h3>
-                    <svg
-                      className="h-6 w-6 text-gray-400 group-hover:text-blue-600 transition"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 5l7 7-7 7"
-                      />
-                    </svg>
-                  </div>
-                  <p className="text-sm text-gray-600">
-                    Edit resume versions, view LaTeX, and compile to PDF
-                  </p>
-                  <p className="text-xs text-gray-500 mt-2">
-                    {versions.length} version{versions.length !== 1 ? 's' : ''} available
-                  </p>
-                </Link>
-              ) : (
-                <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-6">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-lg font-semibold text-gray-500">
-                      Resume Editor
-                    </h3>
-                    <svg
-                      className="h-6 w-6 text-gray-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                      />
-                    </svg>
-                  </div>
-                  <p className="text-sm text-gray-600 mb-3">
-                    No versions available yet
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    A base version should have been created automatically. Try refreshing the page.
-                  </p>
-                </div>
-              )}
-
-              {/* Job Descriptions Link */}
-              <Link
-                href={`/projects/${projectId}/jd`}
-                className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition group"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition">
-                    Job Descriptions
-                  </h3>
-                  <svg
-                    className="h-6 w-6 text-gray-400 group-hover:text-blue-600 transition"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                  </svg>
-                </div>
-                <p className="text-sm text-gray-600">
-                  View all saved job descriptions for this project
-                </p>
-              </Link>
-
-              {/* AI Jobs Link */}
-              <Link
-                href={`/projects/${projectId}/ai-jobs`}
-                className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition group"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition">
-                    AI Jobs
-                  </h3>
-                  <svg
-                    className="h-6 w-6 text-gray-400 group-hover:text-blue-600 transition"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M13 10V3L4 14h7v7l9-11h-7z"
-                    />
-                  </svg>
-                </div>
-                <p className="text-sm text-gray-600">
-                  Track AI tailoring jobs and status
-                </p>
-              </Link>
-            </div>
+            </SlideUp>
           </div>
         )}
       </main>

@@ -32,40 +32,66 @@ export function PDFPreview({ pdfUrl, versionId }: PDFPreviewProps) {
   }, [pdfUrl, versionId]);
 
   return (
-    <div className="flex flex-col h-full bg-zinc-900/40 backdrop-blur-sm">
+    <div className="flex flex-col h-full bg-gradient-to-br from-dark-950 via-dark-900/50 to-dark-950">
       {/* Preview Header */}
-      <div className="bg-zinc-900/60 backdrop-blur-md border-b border-white/10 px-4 py-2">
-        <h2 className="text-sm font-semibold text-zinc-200">PDF Preview</h2>
+      <div className="glass border-b border-white/5 px-6 py-3.5">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-gradient-accent flex items-center justify-center shadow-glow">
+            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold text-white">PDF Preview</h2>
+            <p className="text-xs text-dark-400 mt-0.5">
+              {displayUrl ? 'Live preview of your compiled resume' : 'Compile to see preview'}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Preview Content */}
-      <div className="flex-1 bg-zinc-950/50 flex items-center justify-center p-4">
+      <div className="flex-1 bg-dark-950/50 flex items-center justify-center p-6 border-t border-white/5">
         {displayUrl ? (
-          <iframe
-            key={displayUrl} // Force remount on URL change
-            src={displayUrl}
-            className="w-full h-full border border-white/10 bg-white shadow-lg rounded-sm"
-            title="Resume PDF Preview"
-          />
+          <div className="w-full h-full relative">
+            <iframe
+              key={displayUrl} // Force remount on URL change
+              src={displayUrl}
+              className="w-full h-full border border-white/10 bg-white shadow-2xl rounded-lg"
+              title="Resume PDF Preview"
+            />
+            {/* Subtle overlay for glass effect */}
+            <div className="absolute inset-0 pointer-events-none rounded-lg ring-1 ring-inset ring-white/5"></div>
+          </div>
         ) : (
-          <div className="text-center text-zinc-400">
-            <svg
-              className="w-20 h-20 mx-auto mb-4 text-zinc-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
-            <p className="text-base font-medium text-zinc-300 mb-1">No PDF yet</p>
-            <p className="text-sm text-zinc-500">
-              Click "Compile PDF" to generate preview
-            </p>
+          <div className="text-center max-w-sm">
+            <div className="glass-card p-8 rounded-2xl">
+              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-primary-500/20 to-secondary-500/20 flex items-center justify-center">
+                <svg
+                  className="w-10 h-10 text-primary-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                  />
+                </svg>
+              </div>
+              <p className="text-lg font-semibold text-white mb-2">No PDF Preview</p>
+              <p className="text-sm text-dark-400 mb-4">
+                Click the <span className="text-primary-400 font-medium">Compile PDF</span> button in the toolbar to generate your resume preview.
+              </p>
+              <div className="flex items-center justify-center gap-2 text-xs text-dark-500">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                <span>Instant compilation</span>
+              </div>
+            </div>
           </div>
         )}
       </div>
