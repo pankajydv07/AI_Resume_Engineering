@@ -804,6 +804,7 @@ Optimize this section${jdRawText ? ' to better match the job description' : ''}.
     // CRITICAL FIX: Use transaction to atomically transfer ACTIVE status
     // - Demote current ACTIVE version to DRAFT
     // - Create new AI_GENERATED version as ACTIVE
+    // - Create sections for the new version based on proposals
     // - Delete proposal
     const newVersion = await this.prisma.$transaction(async (tx) => {
       // Step 1: Demote current ACTIVE version to DRAFT
@@ -828,7 +829,88 @@ Optimize this section${jdRawText ? ' to better match the job description' : ''}.
         },
       });
 
-      // Step 3: Delete the proposal (cleanup)
+      // Step 3: Create sections for the new version from proposals
+      // This ensures the new version has proper section data for future AI operations
+      const sectionProposals = aiJob.proposedVersion.sectionProposals as unknown as SectionProposal[];
+      
+      // Get parent sections to preserve lock state and order
+      let parentSections = await tx.resumeSection.findMany({
+        where: { versionId: aiJob.baseVersionId },
+        orderBy: { orderIndex: 'asc' },
+      });
+
+      // EDGE CASE: If parent has no sections, we can still create sections from proposals
+      // This shouldn't happen in normal flow (executeAiJob extracts sections first),
+      // but we handle it gracefully for robustness
+      if (parentSections.length === 0 && sectionProposals.length > 0) {
+        console.warn(`Parent version ${aiJob.baseVersionId} has no sections. Creating sections from proposals only.`);
+        
+        // Use proposals to create sections (default to unlocked, sequential order)
+        const acceptedSet = new Set(acceptProposalDto.acceptedSections || []);
+        const isFullAcceptance = !acceptProposalDto.acceptedSections || acceptProposalDto.acceptedSections.length === 0;
+        
+        for (let i = 0; i < sectionProposals.length; i++) {
+          const proposal = sectionProposals[i];
+          const sectionType = proposal.sectionType as SectionType;
+          
+          const content = (isFullAcceptance || acceptedSet.has(sectionType))
+            ? proposal.after
+            : proposal.before;
+          
+          await tx.resumeSection.create({
+            data: {
+              versionId: version.id,
+              sectionType: sectionType,
+              content,
+              isLocked: false, // Default to unlocked since parent has no lock info
+              orderIndex: i,
+            },
+          });
+        }
+      } else if (parentSections.length > 0) {
+        // NORMAL CASE: Parent has sections, use them with proposals
+        // Build section map from proposals
+        const proposalMap = new Map(
+          sectionProposals.map(p => [p.sectionType, p])
+        );
+
+        // Determine which sections to use "after" content vs "before" content
+        const acceptedSet = new Set(acceptProposalDto.acceptedSections || []);
+        const isFullAcceptance = !acceptProposalDto.acceptedSections || acceptProposalDto.acceptedSections.length === 0;
+
+        // Create sections for new version
+        for (const parentSection of parentSections) {
+          const sectionType = parentSection.sectionType as unknown as SectionType;
+          const proposal = proposalMap.get(sectionType);
+          
+          // Determine content to use:
+          // - If full acceptance or section is in acceptedSections: use "after" (AI version)
+          // - Otherwise: use "before" (original version)
+          let content: string;
+          if (proposal) {
+            if (isFullAcceptance || acceptedSet.has(sectionType)) {
+              content = proposal.after; // Accepted: use AI version
+            } else {
+              content = proposal.before; // Rejected: use original version
+            }
+          } else {
+            // No proposal for this section (shouldn't happen, but fallback to parent)
+            content = parentSection.content;
+          }
+
+          await tx.resumeSection.create({
+            data: {
+              versionId: version.id,
+              sectionType: parentSection.sectionType,
+              content,
+              isLocked: parentSection.isLocked, // Preserve lock state
+              orderIndex: parentSection.orderIndex,
+            },
+          });
+        }
+      }
+
+      // Step 4: Delete the proposal (cleanup)
       await tx.proposedVersion.delete({
         where: { id: aiJob.proposedVersion.id },
       });
