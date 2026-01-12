@@ -226,6 +226,23 @@ export class LatexParserService {
       return [];
     }
 
+    let orderIndex = 0;
+
+    // CRITICAL FIX: Capture content BEFORE the first \section{} as HEADER/OTHER
+    // This preserves the name, contact info, title block that appears before sections
+    const firstSectionStart = allSectionMatches[0].index;
+    const preContent = body.substring(0, firstSectionStart).trim();
+    
+    if (preContent.length > 0) {
+      // There is content before the first section (header block)
+      sections.push({
+        sectionType: SectionType.OTHER,
+        content: preContent,
+        orderIndex: orderIndex++,
+        isLocked: false,
+      });
+    }
+
     // Extract content between section headers
     for (let i = 0; i < allSectionMatches.length; i++) {
       const current = allSectionMatches[i];
@@ -238,7 +255,7 @@ export class LatexParserService {
       sections.push({
         sectionType: current.type,
         content,
-        orderIndex: i,
+        orderIndex: orderIndex++,
         isLocked: false,
       });
     }
