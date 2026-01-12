@@ -135,16 +135,6 @@ export function ProposalActions({
         Review Proposal
       </h3>
 
-      <p className="text-sm text-dark-300 mb-4">
-        Accept this proposal to create a new resume version, or reject it to keep your current resume unchanged.
-      </p>
-
-      {/* Warning - Dark theme */}
-      <div className="glass rounded-lg p-3 mb-4 border border-amber-500/30 bg-amber-500/10">
-        <div className="text-xs text-amber-400">
-          <strong>⚠ Important:</strong> Accepting will create a new resume version. Your base resume will remain unchanged and accessible via version history.
-        </div>
-      </div>
 
       {/* Error Display */}
       {error && (
@@ -192,13 +182,6 @@ export function ProposalActions({
             '✗ Reject Proposal'
           )}
         </button>
-      </div>
-
-      {/* Phase Notice */}
-      <div className="mt-3 pt-3 border-t border-white/10">
-        <div className="text-xs text-dark-500">
-          PHASE 6: Explicit user action required. No auto-apply.
-        </div>
       </div>
     </div>
   );

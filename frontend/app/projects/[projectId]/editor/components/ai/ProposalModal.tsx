@@ -266,35 +266,35 @@ export function ProposalModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-dark-950/90 backdrop-blur-md">
-      <div className="glass-card w-[95vw] h-[90vh] flex flex-col overflow-hidden border border-white/10 shadow-glass">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-dark-950/90 backdrop-blur-md p-4">
+      <div className="glass-card w-full max-w-[98vw] h-[95vh] max-h-[95vh] flex flex-col overflow-hidden border border-white/10 shadow-glass">
         {/* Header - Matching website dark theme */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-dark-900/50">
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-primary rounded-xl flex items-center justify-center shadow-glow">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="flex-shrink-0 flex items-center justify-between px-4 md:px-6 py-3 md:py-4 border-b border-white/10 bg-dark-900/50">
+          <div className="flex items-center space-x-2 md:space-x-4 flex-wrap gap-2">
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-primary rounded-xl flex items-center justify-center shadow-glow">
+                <svg className="w-5 h-5 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                 </svg>
               </div>
               <div>
-                <h2 className="text-lg font-bold text-gradient">
+                <h2 className="text-base md:text-lg font-bold text-gradient">
                   AI Resume Proposal
                 </h2>
-                <p className="text-xs text-dark-400">Review and accept changes</p>
+                <p className="text-xs text-dark-400 hidden sm:block">Review and accept changes</p>
               </div>
             </div>
             {/* GOAL 6: Chat toggle - Dark theme */}
             <button
               type="button"
               onClick={() => setShowChat(!showChat)}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+              className={`px-3 md:px-4 py-1.5 md:py-2 text-xs md:text-sm font-medium rounded-lg transition-all duration-200 ${
                 showChat
                   ? 'bg-gradient-primary text-white shadow-glow'
                   : 'glass text-dark-100 hover:bg-white/10'
               }`}
             >
-              {showChat ? '✓ Chat Active' : '💬 Refine with Chat'}
+              {showChat ? '✓ Chat' : '💬 Chat'}
             </button>
           </div>
           <button
@@ -309,9 +309,9 @@ export function ProposalModal({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-hidden flex bg-dark-900">
+        <div className="flex-1 min-h-0 flex bg-dark-900 overflow-hidden">
           {/* Main proposal area */}
-          <div className={`flex-1 overflow-hidden flex flex-col p-6 ${showChat ? 'w-2/3' : 'w-full'}`}>
+          <div className={`flex flex-col overflow-hidden ${showChat ? 'w-full lg:w-2/3' : 'w-full'}`}>
           {isLoading && (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
@@ -326,11 +326,11 @@ export function ProposalModal({
           )}
 
           {error && (
-            <div className="flex flex-col items-center justify-center h-full space-y-4">
-              <div className="text-center max-w-md glass-card p-8 border border-white/10">
-                <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="flex flex-col items-center justify-center h-full p-4 overflow-auto">
+              <div className="text-center max-w-md glass-card p-6 md:p-8 border border-white/10">
+                <div className="w-12 h-12 md:w-16 md:h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
                   <svg
-                    className="h-8 w-8 text-red-400"
+                    className="h-6 w-6 md:h-8 md:w-8 text-red-400"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -343,9 +343,9 @@ export function ProposalModal({
                     />
                   </svg>
                 </div>
-                <h3 className="text-lg font-bold text-dark-100 mb-2">Failed to Load Proposal</h3>
+                <h3 className="text-base md:text-lg font-bold text-dark-100 mb-2">Failed to Load Proposal</h3>
                 <p className="text-red-400 text-sm font-medium mb-3">{error}</p>
-                <p className="text-dark-400 text-sm">
+                <p className="text-dark-400 text-xs md:text-sm">
                   The AI job completed, but the proposal could not be retrieved. Please try again or check the AI Jobs page.
                 </p>
                 <button
@@ -360,36 +360,36 @@ export function ProposalModal({
           )}
 
           {!isLoading && !error && proposedContent && (
-            <>
+            <div className="flex flex-col h-full overflow-hidden">
               {/* GOAL 4: Section-based diff view or fallback to full LaTeX */}
-              <div className="flex-1 overflow-auto mb-4">
+              <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-3 md:p-6">
                 {sectionProposals.length > 0 ? (
-                  <div className="space-y-4">
+                  <div className="space-y-3 md:space-y-4">
                     {/* Accept/Reject All Buttons - Dark theme */}
-                    <div className="flex items-center justify-between glass-card px-6 py-4 border border-white/10">
-                      <div className="text-sm flex items-center gap-3">
-                        <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-glow">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between glass-card px-4 md:px-6 py-3 md:py-4 border border-white/10 gap-3">
+                      <div className="text-sm flex items-center gap-2 md:gap-3">
+                        <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-primary rounded-xl flex items-center justify-center text-white font-bold text-base md:text-lg shadow-glow">
                           {acceptedSections.size}
                         </div>
                         <div>
-                          <p className="font-semibold text-dark-100">Sections Selected</p>
+                          <p className="font-semibold text-dark-100 text-sm md:text-base">Sections Selected</p>
                           <p className="text-xs text-dark-400">
-                            {acceptedSections.size} of {sectionProposals.filter(p => p.changeType === 'modified').length} modified sections
+                            {acceptedSections.size} of {sectionProposals.filter(p => p.changeType === 'modified').length} modified
                           </p>
                         </div>
                       </div>
-                      <div className="flex space-x-3">
+                      <div className="flex space-x-2 md:space-x-3 w-full sm:w-auto">
                         <button
                           type="button"
                           onClick={acceptAll}
-                          className="px-5 py-2.5 text-sm font-medium bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-glow"
+                          className="flex-1 sm:flex-none px-3 md:px-5 py-2 md:py-2.5 text-xs md:text-sm font-medium bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-glow"
                         >
                           ✓ Accept All
                         </button>
                         <button
                           type="button"
                           onClick={rejectAll}
-                          className="px-5 py-2.5 text-sm font-medium bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-lg hover:from-red-600 hover:to-rose-700 transition-all duration-200 shadow-lg hover:shadow-glow"
+                          className="flex-1 sm:flex-none px-3 md:px-5 py-2 md:py-2.5 text-xs md:text-sm font-medium bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-lg hover:from-red-600 hover:to-rose-700 transition-all duration-200 shadow-lg hover:shadow-glow"
                         >
                           ✕ Reject All
                         </button>
@@ -397,7 +397,7 @@ export function ProposalModal({
                     </div>
 
                     {/* Section Diffs */}
-                    <div className="space-y-3">
+                    <div className="space-y-2 md:space-y-3">
                       {sectionProposals.map((proposal) => (
                         <SectionDiffViewer
                           key={proposal.sectionType}
@@ -420,7 +420,7 @@ export function ProposalModal({
               </div>
 
               {/* Actions */}
-              <div className="flex-shrink-0">
+              <div className="flex-shrink-0 p-3 md:p-4 border-t border-white/10 bg-dark-900/80">
                 <ProposalActions
                   aiJobId={currentJobId}
                   projectId={projectId}
@@ -431,13 +431,13 @@ export function ProposalModal({
                   getToken={getToken}
                 />
               </div>
-            </>
+            </div>
           )}
         </div>
 
         {/* GOAL 6: Chat panel */}
         {showChat && (
-          <div className="w-1/3 h-full">
+          <div className="hidden lg:block w-1/3 h-full border-l border-white/10">
             <ProposalChat
               aiJobId={currentJobId}
               projectId={projectId}

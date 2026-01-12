@@ -277,7 +277,7 @@ Please generate an optimized version of this resume tailored for the above job d
 
       // Call Nebius AI API
       const response = await this.aiClient.chat.completions.create({
-        model: 'openai/gpt-oss-20b',
+        model: 'deepseek-ai/DeepSeek-V3-0324-fast',
         messages: [
           {
             role: 'system',
@@ -365,45 +365,57 @@ Please generate an optimized version of this resume tailored for the above job d
    * Checks for common LaTeX errors that would cause compilation failure
    * 
    * Returns true if errors detected, false if content appears valid
+   * 
+   * NOTE: This validation is intentionally permissive for section content
+   * since sections may not have \section{} headers (they're extracted separately)
    */
   private hasLaTeXSyntaxErrors(content: string): boolean {
     try {
-      // Check 1: Balanced braces
+      // Check 1: Balanced braces (critical for LaTeX)
       let braceCount = 0;
       for (const char of content) {
         if (char === '{') braceCount++;
         if (char === '}') braceCount--;
-        if (braceCount < 0) return true; // More closing than opening
+        if (braceCount < 0) {
+          console.warn('LaTeX validation failed: More closing braces than opening');
+          return true;
+        }
       }
-      if (braceCount !== 0) return true; // Unbalanced braces
-
-      // Check 2: No standalone backslashes at end of lines (invalid escape)
-      if (/\\[\s]*$/.test(content)) return true;
-
-      // Check 3: No undefined control sequences (backslash followed by invalid chars)
-      // Valid commands: \word, \word{}, \word[], not \123, \@#$
-      const invalidCommands = /\\[^a-zA-Z@\s\{\}\[\]\\,;:\.\-]/g;
-      if (invalidCommands.test(content)) return true;
-
-      // Check 4: Essential commands not removed
-      // If original had \section, modified must have it too
-      const hasSectionCommand = /\\section\*?\{/.test(content);
-      if (!hasSectionCommand && content.length > 50) {
-        // Long content without section header is suspicious
-        console.warn('LaTeX validation: Missing \\section command in long content');
+      if (braceCount !== 0) {
+        console.warn(`LaTeX validation failed: Unbalanced braces (count: ${braceCount})`);
+        return true;
       }
 
-      // Check 5: No markdown artifacts
-      if (content.includes('```') || content.includes('##')) return true;
+      // Check 2: No markdown artifacts (AI sometimes includes these)
+      if (content.includes('```')) {
+        console.warn('LaTeX validation failed: Contains markdown code blocks');
+        return true;
+      }
+      
+      // Check 3: No obvious AI refusal messages
+      if (content.includes('I cannot') || content.includes("I can't") || content.includes('I am unable')) {
+        console.warn('LaTeX validation failed: Contains AI refusal message');
+        return true;
+      }
 
-      // Check 6: Balanced square brackets
+      // Check 4: Balanced square brackets (for optional arguments)
       let bracketCount = 0;
       for (const char of content) {
         if (char === '[') bracketCount++;
         if (char === ']') bracketCount--;
-        if (bracketCount < 0) return true;
+        if (bracketCount < 0) {
+          console.warn('LaTeX validation failed: Unbalanced square brackets');
+          return true;
+        }
       }
-      if (bracketCount !== 0) return true;
+      if (bracketCount !== 0) {
+        console.warn(`LaTeX validation failed: Unbalanced square brackets (count: ${bracketCount})`);
+        return true;
+      }
+
+      // NOTE: We do NOT check for \section{} commands here because:
+      // - Section content is extracted WITHOUT section headers
+      // - The section header is preserved separately and added back during assembly
 
       return false; // No errors detected
     } catch (error) {
@@ -439,7 +451,8 @@ Please generate an optimized version of this resume tailored for the above job d
     const proposals: SectionProposal[] = [];
 
     // Build section-specific prompts for each unlocked section
-    for (const section of allSections) {
+    for (let i = 0; i < allSections.length; i++) {
+      const section = allSections[i];
       const isLocked = section.isLocked;
       const sectionType = section.sectionType as SectionType;
 
@@ -452,6 +465,11 @@ Please generate an optimized version of this resume tailored for the above job d
           changeType: 'unchanged',
         });
       } else {
+        // Add small delay between AI calls to avoid rate limiting (except for first call)
+        if (i > 0 && proposals.some(p => p.changeType === 'modified')) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        
         // Unlocked section: send to AI
         const modifiedContent = await this.generateSectionContent(
           section.content,
@@ -502,6 +520,14 @@ Your task: Optimize the ${sectionType} section of a resume${jdRawText ? ' to bet
 
 ${modeInstructions}${customInstructionsContext}
 
+OPTIMIZATION GUIDELINES:
+1. **JD Alignment:** Adjust content to reflect the job description's skills and experience requirements.
+2. **Maintain Length:** Do NOT increase the overall length. Keep it as concise as the original.
+3. **Preserve Header/Education:** NEVER modify header sections or education sections. Leave irrelevant sections untouched.
+4. **Quantify Impact:** Add measurable results where possible without adding fluff.
+5. **Diverse Verbs:** Use varied action verbs and avoid generic buzzwords like "leveraged", "utilized".
+6. **ATS-Friendly:** Ensure output remains easily readable by Applicant Tracking Systems.
+
 CRITICAL LATEX PRESERVATION RULES (MUST FOLLOW):
 1. NEVER remove or modify ANY LaTeX commands (\\section, \\textbf, \\href, \\item, etc.)
 2. NEVER add new LaTeX commands or packages
@@ -514,9 +540,8 @@ CRITICAL LATEX PRESERVATION RULES (MUST FOLLOW):
 9. Maintain exact indentation and spacing where possible
 
 WHAT YOU CAN CHANGE:
-- Job titles, company names (only if improving JD match)
 - Descriptions of responsibilities and achievements
-- Technical keywords and skills
+- Technical keywords and skills (match JD terminology)
 - Action verbs and metrics
 - Bullet point content
 
@@ -527,6 +552,7 @@ WHAT YOU MUST NEVER CHANGE:
 - Special characters: &, %, $, #, _, {, }, ~, ^, \\
 - Section headers structure
 - List environments (itemize, enumerate)
+- Job titles or company names (keep factual)
 
 IF UNCERTAIN: Return the original content unchanged rather than risk breaking LaTeX.`;
 
@@ -542,8 +568,10 @@ ${originalContent}
 Optimize this section${jdRawText ? ' to better match the job description' : ''}. Return ONLY the LaTeX code for this section. Preserve ALL LaTeX commands exactly.`;
 
       // Call AI API with conservative settings
+      console.log(`Calling AI for section: ${sectionType}, content length: ${originalContent.length}`);
+      
       const response = await this.aiClient.chat.completions.create({
-        model: 'openai/gpt-oss-20b',
+        model: 'deepseek-ai/DeepSeek-V3-0324-fast',
         messages: [
           {
             role: 'system',
@@ -559,6 +587,8 @@ Optimize this section${jdRawText ? ' to better match the job description' : ''}.
       });
 
       const generatedContent = response.choices[0]?.message?.content;
+      
+      console.log(`AI response for ${sectionType}: ${generatedContent ? `${generatedContent.length} chars` : 'EMPTY'}`);
 
       if (!generatedContent) {
         // AI failed - return original
@@ -1131,7 +1161,7 @@ Be helpful, specific, and actionable. Use examples when helpful.`;
 
       // Call AI
       const response = await this.aiClient.chat.completions.create({
-        model: 'openai/gpt-oss-20b',
+        model: 'deepseek-ai/DeepSeek-V3-0324-fast',
         messages,
         temperature: 0.7,
         max_tokens: 2048, // Increased to allow reasoning models to complete
