@@ -18,7 +18,7 @@ async function bootstrap() {
   
   // Enable CORS for frontend
   app.enableCors({
-    origin: 'http://localhost:3000', // Frontend URL
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
     credentials: true,
   });
   
@@ -30,15 +30,10 @@ async function bootstrap() {
       transform: true,
     }),
   );
-  
-  // TODO: Add Clerk authentication middleware
-  // TODO: Add global exception filter
-  // TODO: Add request logging
-  
-  const port = process.env.PORT || 3001;
-  await app.listen(port);
-  
-  console.log(`Backend server running on http://localhost:${port}/api`);
-}
 
+  const port = process.env.PORT || 8080;
+  await app.listen(port, '0.0.0.0');
+
+  console.log(`Server running on port ${port}`);
+}
 bootstrap();

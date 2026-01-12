@@ -21,8 +21,7 @@
  * Backend API base URL
  * Falls back to localhost if env variable not set (development default)
  */
-export const API_BASE_URL = 
-  process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 
 /**
  * Helper function to build API URLs

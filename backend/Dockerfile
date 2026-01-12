@@ -48,7 +48,10 @@ RUN chown -R nestjs:nodejs /app
 
 USER nestjs
 
-EXPOSE 3001
+# Cloud Run uses PORT 8080 by default
+ENV PORT=8080
+EXPOSE 8080
 
-# Run migrations and start the server
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]
+# Start the server without running migrations
+# Migrations should be run separately via Cloud Build or manually
+CMD ["node", "dist/main"]
