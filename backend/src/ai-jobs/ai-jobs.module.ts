@@ -3,6 +3,7 @@ import { AiJobsController } from './ai-jobs.controller';
 import { AiJobsService } from './ai-jobs.service';
 import { DiffService } from './diff.service';
 import { VersionsModule } from '../versions/versions.module';
+import { ApiKeysModule } from '../api-keys/api-keys.module';
 
 /**
  * AI Jobs Module
@@ -13,7 +14,7 @@ import { VersionsModule } from '../versions/versions.module';
  * GOAL 3: Import VersionsModule for SectionsService access
  */
 @Module({
-  imports: [VersionsModule],
+  imports: [VersionsModule, ApiKeysModule],
   controllers: [AiJobsController],
   providers: [AiJobsService, DiffService],
   exports: [AiJobsService],

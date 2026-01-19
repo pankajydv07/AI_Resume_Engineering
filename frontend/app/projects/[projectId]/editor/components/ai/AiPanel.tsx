@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ChatMode, type Message } from './ChatMode';
 import { EditMode } from './EditMode';
 import { JdInputModal } from './JdInputModal';
+import { ModeSwitcher } from '@/components/ui/mode-switcher';
 import { apiUrl } from '@/lib/api';
 import { handleHttpError, getErrorMessage } from '@/lib/errorHandling';
 
@@ -146,70 +148,80 @@ export function AiPanel({
 
   return (
     <div className="h-full flex flex-col bg-gray-900 text-gray-100">
-      {/* Header */}
-      <div className="flex-shrink-0 border-b border-gray-700 bg-gray-900">
+      {/* Header with smooth mode switcher */}
+      <div className="flex-shrink-0 border-b border-gray-700/50 bg-gray-900/95 backdrop-blur-sm">
         <div className="px-4 py-3">
-          {/* Mode Toggle */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setMode('chat')}
-              className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                mode === 'chat'
-                  ? 'bg-blue-600 text-white shadow-lg'
-                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-200'
-              }`}
-            >
-              Chat
-            </button>
-            <button
-              onClick={() => setMode('edit')}
-              className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                mode === 'edit'
-                  ? 'bg-blue-600 text-white shadow-lg'
-                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-200'
-              }`}
-            >
-              Edit
-            </button>
-          </div>
+          <ModeSwitcher
+            mode={mode}
+            onModeChange={setMode}
+            disabled={isEditorLocked}
+          />
         </div>
       </div>
 
-      {/* Mode Content */}
-      <div className="flex-1 overflow-hidden">
-        {mode === 'chat' ? (
-          <ChatMode
-            projectId={projectId}
-            baseLatexContent={baseLatexContent}
-            jobDescription={jobDescription}
-            isLocked={isEditorLocked}
-            getToken={getToken}
-            messages={chatMessages}
-            setMessages={setChatMessages}
-            isLoading={isChatLoading}
-            setIsLoading={setIsChatLoading}
-            onOpenJdModal={() => setIsJdModalOpen(true)}
-            hasJd={!!jobDescription}
-            isLoadingJds={isLoadingJds}
-            jdError={jdError}
-            onRemoveJd={handleRemoveJd}
-          />
-        ) : (
-          <EditMode
-            projectId={projectId}
-            baseVersionId={baseVersionId}
-            baseLatexContent={baseLatexContent}
-            jdId={jdId}
-            isLocked={isEditorLocked}
-            onVersionChange={onVersionChange}
-            getToken={getToken}
-            onOpenJdModal={() => setIsJdModalOpen(true)}
-            hasJd={!!jobDescription}
-            isLoadingJds={isLoadingJds}
-            jdError={jdError}
-            onRemoveJd={handleRemoveJd}
-          />
-        )}
+      {/* Mode Content with smooth transitions */}
+      <div className="flex-1 overflow-hidden relative">
+        <AnimatePresence mode="wait">
+          {mode === 'chat' ? (
+            <motion.div
+              key="chat"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{
+                type: "spring",
+                stiffness: 300,
+                damping: 30,
+              }}
+              className="h-full"
+            >
+              <ChatMode
+                projectId={projectId}
+                baseLatexContent={baseLatexContent}
+                jobDescription={jobDescription}
+                isLocked={isEditorLocked}
+                getToken={getToken}
+                messages={chatMessages}
+                setMessages={setChatMessages}
+                isLoading={isChatLoading}
+                setIsLoading={setIsChatLoading}
+                onOpenJdModal={() => setIsJdModalOpen(true)}
+                hasJd={!!jobDescription}
+                isLoadingJds={isLoadingJds}
+                jdError={jdError}
+                onRemoveJd={handleRemoveJd}
+              />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="edit"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{
+                type: "spring",
+                stiffness: 300,
+                damping: 30,
+              }}
+              className="h-full"
+            >
+              <EditMode
+                projectId={projectId}
+                baseVersionId={baseVersionId}
+                baseLatexContent={baseLatexContent}
+                jdId={jdId}
+                isLocked={isEditorLocked}
+                onVersionChange={onVersionChange}
+                getToken={getToken}
+                onOpenJdModal={() => setIsJdModalOpen(true)}
+                hasJd={!!jobDescription}
+                isLoadingJds={isLoadingJds}
+                jdError={jdError}
+                onRemoveJd={handleRemoveJd}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* JD Input Modal */}

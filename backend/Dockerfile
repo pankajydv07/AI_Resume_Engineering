@@ -2,9 +2,11 @@
 
 FROM node:20-alpine AS base
 
-# Install OpenSSL for Prisma and TexLive for LaTeX compilation
+# Install OpenSSL for Prisma and full TeX Live for LaTeX compilation
+# Alpine 3.17+ uses OpenSSL 3.x, but we need compatibility libs
 RUN apk add --no-cache \
     openssl \
+    openssl-dev \
     texlive-full
 
 # Install dependencies only when needed
@@ -13,7 +15,9 @@ WORKDIR /app
 
 # Copy package files
 COPY package.json package-lock.json* ./
-RUN npm ci
+# Use npm ci with cache to speed up builds
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci
 
 # Rebuild the source code only when needed
 FROM base AS builder

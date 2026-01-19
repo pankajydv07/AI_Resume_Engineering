@@ -1,15 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { FileText, Zap, ExternalLink } from 'lucide-react';
 
 /**
- * PHASE 3: PDF Preview Component
- * PHASE 8: Enhanced with cache-busting and compile status
+ * REFACTORED PDF PREVIEW
  * 
- * Per userflow.md Section 2.5:
- * - RIGHT side of editor layout
- * - Shows compiled PDF preview
- * - Refreshes when pdfUrl changes (compilation completes)
+ * Clean, minimal design with:
+ * - No header (cleaner look)
+ * - Beautiful empty state
+ * - Smooth transitions
  */
 
 interface PDFPreviewProps {
@@ -19,10 +20,12 @@ interface PDFPreviewProps {
 
 export function PDFPreview({ pdfUrl, versionId }: PDFPreviewProps) {
   const [displayUrl, setDisplayUrl] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Update display URL with cache-busting when pdfUrl changes
   useEffect(() => {
     if (pdfUrl) {
+      setIsLoading(true);
       // Add timestamp to force iframe reload (cache-busting)
       const cacheBustedUrl = `${pdfUrl}?t=${Date.now()}`;
       setDisplayUrl(cacheBustedUrl);
@@ -32,66 +35,73 @@ export function PDFPreview({ pdfUrl, versionId }: PDFPreviewProps) {
   }, [pdfUrl, versionId]);
 
   return (
-    <div className="flex flex-col h-full bg-gradient-to-br from-dark-950 via-dark-900/50 to-dark-950">
-      {/* Preview Header */}
-      <div className="glass border-b border-white/5 px-6 py-3.5">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-accent flex items-center justify-center shadow-glow">
-            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-            </svg>
-          </div>
-          <div>
-            <h2 className="text-sm font-semibold text-white">PDF Preview</h2>
-            <p className="text-xs text-dark-400 mt-0.5">
-              {displayUrl ? 'Live preview of your compiled resume' : 'Compile to see preview'}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Preview Content */}
-      <div className="flex-1 bg-dark-950/50 flex items-center justify-center p-6 border-t border-white/5">
+    <div className="h-full flex flex-col">
+      {/* PDF Content */}
+      <div className="flex-1 relative">
         {displayUrl ? (
-          <div className="w-full h-full relative">
+          <>
+            {/* Loading overlay */}
+            {isLoading && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-gray-900/80 backdrop-blur-sm">
+                <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-800/80 border border-white/10">
+                  <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-sm text-gray-300">Loading preview...</span>
+                </div>
+              </div>
+            )}
+            
+            {/* PDF iframe */}
             <iframe
-              key={displayUrl} // Force remount on URL change
+              key={displayUrl}
               src={displayUrl}
-              className="w-full h-full border border-white/10 bg-white shadow-2xl rounded-lg"
+              className="w-full h-full bg-white"
               title="Resume PDF Preview"
+              onLoad={() => setIsLoading(false)}
             />
-            {/* Subtle overlay for glass effect */}
-            <div className="absolute inset-0 pointer-events-none rounded-lg ring-1 ring-inset ring-white/5"></div>
-          </div>
+            
+            {/* Open in new tab button */}
+            <motion.a
+              href={pdfUrl || '#'}
+              target="_blank"
+              rel="noopener noreferrer"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="absolute bottom-4 right-4 flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-900/90 backdrop-blur-sm border border-white/10 text-sm text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
+            >
+              <ExternalLink className="w-4 h-4" />
+              <span>Open</span>
+            </motion.a>
+          </>
         ) : (
-          <div className="text-center max-w-sm">
-            <div className="glass-card p-8 rounded-2xl">
-              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-primary-500/20 to-secondary-500/20 flex items-center justify-center">
-                <svg
-                  className="w-10 h-10 text-primary-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                  />
-                </svg>
+          <div className="h-full flex items-center justify-center p-8">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="text-center max-w-sm"
+            >
+              {/* Icon */}
+              <div className="relative mx-auto w-24 h-24 mb-6">
+                <div className="absolute inset-0 bg-gradient-to-br from-red-500/20 to-orange-500/20 rounded-2xl blur-xl" />
+                <div className="relative w-full h-full bg-gradient-to-br from-red-500/10 to-orange-500/10 rounded-2xl border border-white/10 flex items-center justify-center">
+                  <FileText className="w-10 h-10 text-red-400" />
+                </div>
               </div>
-              <p className="text-lg font-semibold text-white mb-2">No PDF Preview</p>
-              <p className="text-sm text-dark-400 mb-4">
-                Click the <span className="text-primary-400 font-medium">Compile PDF</span> button in the toolbar to generate your resume preview.
+              
+              {/* Text */}
+              <h3 className="text-xl font-semibold text-white mb-2">No Preview Yet</h3>
+              <p className="text-gray-400 text-sm mb-6">
+                Compile your resume to see a live PDF preview here.
               </p>
-              <div className="flex items-center justify-center gap-2 text-xs text-dark-500">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                <span>Instant compilation</span>
+              
+              {/* Hint */}
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                <Zap className="w-4 h-4 text-amber-400" />
+                <span className="text-sm text-amber-300">
+                  Click <span className="font-medium">Compile</span> to generate
+                </span>
               </div>
-            </div>
+            </motion.div>
           </div>
         )}
       </div>

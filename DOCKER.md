@@ -11,16 +11,19 @@ This document explains how to run the JD-Aware Resume Engineering SaaS using Doc
 
 ### 1. Environment Setup
 
-Create a `.env` file in the project root:
+Create a single `.env` file in the project root:
 
 ```bash
 cp .env.example .env
 ```
 
 Edit `.env` and add your credentials:
-- `CLERK_PUBLISHABLE_KEY`
-- `CLERK_SECRET_KEY`
-- `NEBIUS_API_KEY`
+- `CLERK_PUBLISHABLE_KEY` - Get from https://dashboard.clerk.com/
+- `CLERK_SECRET_KEY` - Get from https://dashboard.clerk.com/
+- `NEBIUS_API_KEY` - Get from https://studio.nebius.ai/
+- `CLOUDINARY_URL` - Get from https://cloudinary.com/
+
+**Note**: The application now uses a single `.env` file in the root directory for all services (frontend, backend, and docker-compose). You don't need separate `.env` files for each service.
 
 ### 2. Build and Run
 

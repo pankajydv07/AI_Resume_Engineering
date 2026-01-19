@@ -1,4 +1,32 @@
-# Backend Scaffolding Complete
+# Backend Setup Guide
+
+## Environment Configuration
+
+The backend now uses a **single `.env` file** located in the project root directory.
+
+### Setup Steps
+
+1. **Copy the example file**:
+   ```bash
+   # From project root
+   cp .env.example .env
+   ```
+
+2. **Fill in your credentials** in `.env`:
+   - `CLERK_PUBLISHABLE_KEY` - From https://dashboard.clerk.com/
+   - `CLERK_SECRET_KEY` - From https://dashboard.clerk.com/
+   - `DATABASE_URL` - PostgreSQL connection string
+   - `NEBIUS_API_KEY` - From https://studio.nebius.ai/
+   - `CLOUDINARY_URL` - From https://cloudinary.com/
+
+3. **Environment File Location**:
+   - The backend will automatically read from:
+     - Root `.env` file (recommended)
+     - OR `backend/.env` file (legacy support)
+
+**Note**: The old `backend/.env.example` file is deprecated. Use the root `.env.example` instead.
+
+---
 
 ## ✅ PHASE 1: SCAFFOLDING - COMPLETED
 

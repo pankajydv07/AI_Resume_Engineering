@@ -224,7 +224,8 @@ Copy code
   "baseVersionId": "uuid",
   "jdId": "uuid",
   "mode": "MINIMAL | BALANCED | AGGRESSIVE",
-  "lockedSections": ["EDUCATION", "PROJECTS"]
+  "lockedSections": ["EDUCATION", "PROJECTS"],
+  "modelProvider": "DEEPSEEK | AZURE_OPENAI"
 }
 Response:
 
@@ -238,6 +239,10 @@ Rules:
 Async only
 
 No blocking responses
+
+modelProvider is optional (defaults to DEEPSEEK)
+
+If AZURE_OPENAI is selected, user must have valid API key configured
 
 6.2 Get AI Job Status
 GET /ai/jobs/{jobId}
@@ -280,8 +285,91 @@ View all AI tailoring jobs for a project
 
 Track job history
 
-7. VERSION DIFF APIS
-7.1 Get Version Diff
+7. API KEY MANAGEMENT APIS
+7.1 Store API Key
+POST /api-keys
+
+Request:
+
+json
+Copy code
+{
+  "provider": "AZURE_OPENAI",
+  "apiKey": "string",
+  "endpoint": "https://your-resource.openai.azure.com"
+}
+Response:
+
+json
+Copy code
+{
+  "id": "uuid",
+  "provider": "AZURE_OPENAI",
+  "isValid": true,
+  "lastValidated": "timestamp"
+}
+Notes:
+
+endpoint is required for AZURE_OPENAI
+
+apiKey is validated before storing
+
+Returns validation error if key is invalid
+
+7.2 List User API Keys
+GET /api-keys
+
+Response:
+
+json
+Copy code
+[
+  {
+    "id": "uuid",
+    "provider": "AZURE_OPENAI",
+    "endpoint": "https://your-resource.openai.azure.com",
+    "isValid": true,
+    "lastValidated": "timestamp",
+    "validationError": null,
+    "createdAt": "timestamp"
+  }
+]
+Notes:
+
+apiKey is NEVER returned in responses
+
+Only metadata is exposed
+
+7.3 Validate API Key
+POST /api-keys/{id}/validate
+
+Response:
+
+json
+Copy code
+{
+  "isValid": true,
+  "validationError": null,
+  "lastValidated": "timestamp"
+}
+Purpose:
+
+Test if API key is still valid
+
+Update validation status in database
+
+7.4 Delete API Key
+DELETE /api-keys/{id}
+
+Response:
+
+json
+Copy code
+{
+  "success": true
+}
+8. VERSION DIFF APIS
+8.1 Get Version Diff
 GET /versions/diff?from={versionId}&to={versionId}
 
 Response:
@@ -304,15 +392,15 @@ Diff view
 
 AI transparency
 
-8. EXPORT APIS
-8.1 Download PDF
+9. EXPORT APIS
+9.1 Download PDF
 GET /versions/{versionId}/download/pdf
 
 Response:
 
 File stream or signed URL
 
-8.2 Download LaTeX
+9.2 Download LaTeX
 GET /versions/{versionId}/download/latex
 
 Response:
@@ -323,7 +411,7 @@ Compilation is synchronous
 
 PDF retrieved via pdfUrl
 
-9. ERROR RESPONSE FORMAT (GLOBAL)
+10. ERROR RESPONSE FORMAT (GLOBAL)
 All error responses must follow:
 
 json
@@ -332,7 +420,7 @@ Copy code
   "error": "ERROR_CODE",
   "message": "Human readable message"
 }
-10. DISALLOWED APIS
+11. DISALLOWED APIS
 The following are explicitly NOT allowed:
 
 ❌ Bulk AI endpoints
@@ -343,7 +431,7 @@ The following are explicitly NOT allowed:
 
 If an API is not listed → it must not exist.
 
-11. OUT OF SCOPE (FOR NOW)
+12. OUT OF SCOPE (FOR NOW)
 Billing APIs
 
 Team / org APIs

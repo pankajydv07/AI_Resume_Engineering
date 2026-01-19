@@ -1,18 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { UserButton, useAuth } from "@clerk/nextjs";
+import { useAuth } from "@clerk/nextjs";
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 import { handleHttpError, getErrorMessage, isRetryableError } from '@/lib/errorHandling';
 import { apiUrl } from '@/lib/api';
-import { GlassCard } from '@/components/ui/GlassCard';
-import { Button } from '@/components/ui/Button';
-import { FadeIn, SlideUp } from '@/components/ui/Animated';
+import { cn } from '@/lib/utils';
 import { 
   Plus, FileText, Clock, GitBranch, Upload, 
   Sparkles, TrendingUp, CheckCircle, AlertCircle,
-  FolderOpen, Settings, ArrowRight
+  FolderOpen, ArrowRight, Settings, X, Folder
 } from 'lucide-react';
 
 /**
@@ -224,151 +223,162 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-dark-950">
-      {/* Background gradients */}
-      <div className="fixed inset-0 -z-10">
-        <div className="absolute top-0 right-1/4 w-96 h-96 bg-primary-500/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/3 left-1/4 w-96 h-96 bg-secondary-500/10 rounded-full blur-3xl" />
+    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950">
+      {/* Background Elements */}
+      <div className="fixed inset-0 -z-10 pointer-events-none overflow-hidden">
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:64px_64px]" />
+        <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-purple-500/5 rounded-full blur-[100px]" />
+        <div className="absolute bottom-0 left-1/4 w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[100px]" />
       </div>
 
-      {/* Header */}
-      <header className="glass border-b border-white/10 sticky top-0 z-40 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-gradient-primary rounded-lg flex items-center justify-center">
-                <Sparkles className="w-6 h-6 text-white" />
-              </div>
-              <span className="text-xl font-bold text-gradient">ResumeAI</span>
-            </Link>
-          </div>
-          <UserButton afterSignOutUrl="/" />
-        </div>
-      </header>
-
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-24">
         {/* Welcome Section */}
-        <FadeIn>
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold mb-2">
-              Welcome back! 👋
-            </h1>
-            <p className="text-dark-300 text-lg">Let's get you hired</p>
-          </div>
-        </FadeIn>
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <h1 className="text-4xl font-bold text-white mb-2">
+            Welcome back! 👋
+          </h1>
+          <p className="text-gray-400 text-lg">Let's get you hired</p>
+        </motion.div>
 
         {/* Quick Actions */}
-        <SlideUp delay={0.1}>
-          <GlassCard className="mb-8 p-8">
-            <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <button
-                onClick={openCreateModal}
-                className="glass-card p-6 hover:scale-105 transition-all duration-200 hover:shadow-glow group text-left"
-              >
-                <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <Plus className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="font-semibold mb-1">New Project</h3>
-                <p className="text-sm text-dark-400">Create a new resume project</p>
-              </button>
-
-              <button
-                onClick={() => setCreationMode('upload')}
-                className="glass-card p-6 hover:scale-105 transition-all duration-200 hover:shadow-glow-secondary group text-left"
-              >
-                <div className="w-12 h-12 bg-gradient-secondary rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <Upload className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="font-semibold mb-1">Upload Resume</h3>
-                <p className="text-sm text-dark-400">Start from existing file</p>
-              </button>
-
-              <div className="glass-card p-6 opacity-60 text-left">
-                <div className="w-12 h-12 bg-gradient-accent rounded-xl flex items-center justify-center mb-4">
-                  <Sparkles className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="font-semibold mb-1">AI Generate</h3>
-                <p className="text-sm text-dark-400">Coming soon</p>
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="mb-8 rounded-2xl bg-gray-900/50 backdrop-blur-sm border border-white/10 p-8"
+        >
+          <h2 className="text-xl font-semibold text-white mb-4">Quick Actions</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <button
+              onClick={openCreateModal}
+              className="p-6 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all duration-200 group text-left"
+            >
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <Plus className="w-6 h-6 text-white" />
               </div>
+              <h3 className="font-semibold text-white mb-1">New Project</h3>
+              <p className="text-sm text-gray-400">Create a new resume project</p>
+            </button>
+
+            <button
+              onClick={() => {
+                setCreationMode('upload');
+                openCreateModal();
+              }}
+              className="p-6 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all duration-200 group text-left"
+            >
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <Upload className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="font-semibold text-white mb-1">Upload Resume</h3>
+              <p className="text-sm text-gray-400">Start from existing file</p>
+            </button>
+
+            <div className="p-6 rounded-xl bg-white/5 border border-white/5 opacity-50 text-left cursor-not-allowed">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center mb-4">
+                <Sparkles className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="font-semibold text-white mb-1">AI Generate</h3>
+              <p className="text-sm text-gray-400">Coming soon</p>
             </div>
-          </GlassCard>
-        </SlideUp>
+          </div>
+        </motion.div>
 
         {/* Error Display */}
         {error && (
-          <SlideUp delay={0.2}>
-            <GlassCard className="mb-6 bg-red-500/10 border-red-500/20">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-semibold text-red-300">Error</p>
-                  <p className="text-sm text-red-200 mt-1">{error}</p>
-                </div>
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 rounded-xl bg-red-500/10 border border-red-500/20 p-4"
+          >
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-red-300">Error</p>
+                <p className="text-sm text-red-200 mt-1">{error}</p>
               </div>
-            </GlassCard>
-          </SlideUp>
+            </div>
+          </motion.div>
         )}
 
         {/* Loading State */}
         {isLoading && (
-          <SlideUp delay={0.2}>
-            <GlassCard>
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-2 border-primary-500 border-t-transparent"></div>
-                <span className="ml-4 text-dark-300">Loading projects...</span>
-              </div>
-            </GlassCard>
-          </SlideUp>
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-2xl bg-gray-900/50 backdrop-blur-sm border border-white/10"
+          >
+            <div className="flex items-center justify-center py-12">
+              <div className="w-10 h-10 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+              <span className="ml-4 text-gray-300">Loading projects...</span>
+            </div>
+          </motion.div>
         )}
 
         {/* Empty State */}
         {!isLoading && !error && projects.length === 0 && (
-          <SlideUp delay={0.2}>
-            <GlassCard className="text-center py-16">
-              <div className="w-20 h-20 bg-gradient-primary rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <FileText className="w-10 h-10 text-white" />
-              </div>
-              <h3 className="text-2xl font-bold mb-2">No projects yet</h3>
-              <p className="text-dark-300 mb-6 max-w-md mx-auto">
-                Get started by creating your first resume project and let AI help you land your dream job.
-              </p>
-              <Button onClick={openCreateModal} variant="primary" size="lg">
-                <Plus className="w-5 h-5 mr-2" />
-                Create Your First Project
-              </Button>
-            </GlassCard>
-          </SlideUp>
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-2xl bg-gray-900/50 backdrop-blur-sm border border-white/10 text-center py-16"
+          >
+            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mx-auto mb-6">
+              <FileText className="w-10 h-10 text-white" />
+            </div>
+            <h3 className="text-2xl font-bold text-white mb-2">No projects yet</h3>
+            <p className="text-gray-400 mb-6 max-w-md mx-auto">
+              Get started by creating your first resume project and let AI help you land your dream job.
+            </p>
+            <button 
+              onClick={openCreateModal} 
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium hover:from-blue-500 hover:to-indigo-500 transition-all shadow-lg shadow-blue-500/20"
+            >
+              <Plus className="w-5 h-5" />
+              Create Your First Project
+            </button>
+          </motion.div>
         )}
 
         {/* Projects Grid */}
         {!isLoading && !error && projects.length > 0 && (
           <>
-            <SlideUp delay={0.2}>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold">Your Projects</h2>
-                <span className="text-dark-400">{projects.length} {projects.length === 1 ? 'project' : 'projects'}</span>
-              </div>
-            </SlideUp>
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="flex items-center justify-between mb-6"
+            >
+              <h2 className="text-2xl font-bold text-white">Your Projects</h2>
+              <span className="text-gray-400">{projects.length} {projects.length === 1 ? 'project' : 'projects'}</span>
+            </motion.div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {projects.map((project, index) => (
-                <SlideUp key={project.projectId} delay={0.3 + index * 0.05}>
+                <motion.div 
+                  key={project.projectId} 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 + index * 0.05 }}
+                >
                   <Link href={`/projects/${project.projectId}`}>
-                    <GlassCard className="group cursor-pointer h-full">
+                    <div className="group cursor-pointer h-full p-6 rounded-2xl bg-gray-900/50 backdrop-blur-sm border border-white/10 hover:bg-gray-900/70 hover:border-white/20 transition-all duration-200">
                       <div className="flex items-start justify-between mb-4">
-                        <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                          <FileText className="w-6 h-6 text-white" />
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-indigo-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                          <Folder className="w-6 h-6 text-blue-400" />
                         </div>
-                        <ArrowRight className="w-5 h-5 text-dark-400 group-hover:translate-x-1 group-hover:text-primary-400 transition-all" />
+                        <ArrowRight className="w-5 h-5 text-gray-500 group-hover:translate-x-1 group-hover:text-blue-400 transition-all" />
                       </div>
 
-                      <h3 className="text-lg font-semibold mb-2 line-clamp-2 group-hover:text-primary-400 transition-colors">
+                      <h3 className="text-lg font-semibold text-white mb-2 line-clamp-2 group-hover:text-blue-400 transition-colors">
                         {project.name}
                       </h3>
 
-                      <div className="space-y-2 text-sm text-dark-400">
+                      <div className="space-y-2 text-sm text-gray-400">
                         <div className="flex items-center gap-2">
                           <Clock className="w-4 h-4" />
                           <span>{formatDate(project.updatedAt)}</span>
@@ -379,13 +389,13 @@ export default function DashboardPage() {
                         </div>
                       </div>
 
-                      <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between">
-                        <span className="text-xs text-dark-500">Click to open</span>
-                        <Settings className="w-4 h-4 text-dark-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
+                        <span className="text-xs text-gray-500">Click to open</span>
+                        <Settings className="w-4 h-4 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
-                    </GlassCard>
+                    </div>
                   </Link>
-                </SlideUp>
+                </motion.div>
               ))}
             </div>
           </>
@@ -393,20 +403,38 @@ export default function DashboardPage() {
       </main>
 
       {/* Create Project Modal */}
-      {isCreateModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
-          <FadeIn>
-            <GlassCard className="max-w-md w-full p-0 overflow-hidden">
-              <div className="p-6 border-b border-white/10">
-                <h2 className="text-2xl font-bold">
+      <AnimatePresence>
+        {isCreateModalOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+            onClick={closeCreateModal}
+          >
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="max-w-md w-full rounded-2xl bg-gray-900 border border-white/10 shadow-2xl overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6 border-b border-white/5 flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-white">
                   Create New Project
                 </h2>
+                <button 
+                  onClick={closeCreateModal}
+                  className="p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
 
               <form onSubmit={handleCreateProject} className="p-6">
                 {/* Project Name Input */}
                 <div className="mb-6">
-                  <label htmlFor="projectName" className="block text-sm font-medium mb-2">
+                  <label htmlFor="projectName" className="block text-sm font-medium text-gray-300 mb-2">
                     Project Name
                   </label>
                   <input
@@ -415,7 +443,7 @@ export default function DashboardPage() {
                     value={projectName}
                     onChange={(e) => setProjectName(e.target.value)}
                     disabled={isCreating || isUploading}
-                    className="input-primary"
+                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all disabled:opacity-50"
                     placeholder="e.g., Software Engineer Resume"
                     autoFocus
                   />
@@ -423,11 +451,16 @@ export default function DashboardPage() {
 
                 {/* Creation Mode Selection */}
                 <div className="mb-6">
-                  <label className="block text-sm font-medium mb-3">
+                  <label className="block text-sm font-medium text-gray-300 mb-3">
                     How would you like to start?
                   </label>
                   <div className="space-y-3">
-                    <label className="flex items-start gap-3 p-4 glass-card cursor-pointer hover:bg-white/10 transition-colors">
+                    <label className={cn(
+                      "flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all",
+                      creationMode === 'scratch' 
+                        ? "bg-blue-500/10 border-blue-500/30 ring-2 ring-blue-500/20"
+                        : "bg-white/5 border-white/10 hover:bg-white/10"
+                    )}>
                       <input
                         type="radio"
                         name="creationMode"
@@ -439,18 +472,23 @@ export default function DashboardPage() {
                           setCreateError(null);
                         }}
                         disabled={isCreating || isUploading}
-                        className="mt-1"
+                        className="mt-1 accent-blue-500"
                       />
                       <div className="flex-1">
-                        <div className="font-medium flex items-center gap-2">
-                          <FileText className="w-4 h-4 text-primary-400" />
+                        <div className="font-medium text-white flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-blue-400" />
                           Build from scratch
                         </div>
-                        <div className="text-xs text-dark-400 mt-1">Start with a blank LaTeX template</div>
+                        <div className="text-xs text-gray-500 mt-1">Start with a blank LaTeX template</div>
                       </div>
                     </label>
                     
-                    <label className="flex items-start gap-3 p-4 glass-card cursor-pointer hover:bg-white/10 transition-colors">
+                    <label className={cn(
+                      "flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all",
+                      creationMode === 'upload' 
+                        ? "bg-purple-500/10 border-purple-500/30 ring-2 ring-purple-500/20"
+                        : "bg-white/5 border-white/10 hover:bg-white/10"
+                    )}>
                       <input
                         type="radio"
                         name="creationMode"
@@ -461,14 +499,14 @@ export default function DashboardPage() {
                           setCreateError(null);
                         }}
                         disabled={isCreating || isUploading}
-                        className="mt-1"
+                        className="mt-1 accent-purple-500"
                       />
                       <div className="flex-1">
-                        <div className="font-medium flex items-center gap-2">
-                          <Upload className="w-4 h-4 text-secondary-400" />
+                        <div className="font-medium text-white flex items-center gap-2">
+                          <Upload className="w-4 h-4 text-purple-400" />
                           Upload existing resume
                         </div>
-                        <div className="text-xs text-dark-400 mt-1">PDF or LaTeX (.tex) file</div>
+                        <div className="text-xs text-gray-500 mt-1">PDF or LaTeX (.tex) file</div>
                       </div>
                     </label>
                   </div>
@@ -477,7 +515,7 @@ export default function DashboardPage() {
                 {/* File Upload */}
                 {creationMode === 'upload' && (
                   <div className="mb-6">
-                    <label htmlFor="resumeFile" className="block text-sm font-medium mb-2">
+                    <label htmlFor="resumeFile" className="block text-sm font-medium text-gray-300 mb-2">
                       Resume File
                     </label>
                     <input
@@ -486,18 +524,18 @@ export default function DashboardPage() {
                       accept=".pdf,.tex,application/pdf,application/x-tex,text/x-tex"
                       onChange={handleFileChange}
                       disabled={isCreating || isUploading}
-                      className="w-full px-3 py-2 glass rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary-500/20 file:text-primary-300 hover:file:bg-primary-500/30"
+                      className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500/50 disabled:opacity-50 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-500/20 file:text-purple-300 hover:file:bg-purple-500/30 file:cursor-pointer cursor-pointer"
                     />
                     {uploadFile && (
-                      <p className="mt-2 text-sm text-dark-400">
+                      <p className="mt-2 text-sm text-gray-400">
                         Selected: {uploadFile.name} ({(uploadFile.size / 1024).toFixed(1)} KB)
                       </p>
                     )}
                     {isUploading && (
-                      <div className="mt-3 p-3 glass-card bg-primary-500/10 border-primary-500/20">
+                      <div className="mt-3 p-3 rounded-xl bg-purple-500/10 border border-purple-500/20">
                         <div className="flex items-center gap-2 text-sm">
-                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary-400 border-t-transparent"></div>
-                          <span className="text-primary-300">
+                          <div className="w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+                          <span className="text-purple-300">
                             {uploadFile?.name.endsWith('.pdf') 
                               ? 'Extracting text and generating LaTeX...' 
                               : 'Processing LaTeX file...'}
@@ -510,7 +548,7 @@ export default function DashboardPage() {
 
                 {/* Error Display */}
                 {createError && (
-                  <div className="mb-6 p-3 glass-card bg-red-500/10 border-red-500/20">
+                  <div className="mb-6 p-3 rounded-xl bg-red-500/10 border border-red-500/20">
                     <div className="flex items-start gap-2">
                       <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
                       <p className="text-sm text-red-300">{createError}</p>
@@ -520,15 +558,15 @@ export default function DashboardPage() {
 
                 {/* Action Buttons */}
                 <div className="flex gap-3 justify-end">
-                  <Button
+                  <button
                     type="button"
                     onClick={closeCreateModal}
                     disabled={isCreating || isUploading}
-                    variant="ghost"
+                    className="px-4 py-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-colors disabled:opacity-50"
                   >
                     Cancel
-                  </Button>
-                  <Button
+                  </button>
+                  <button
                     type="submit"
                     disabled={
                       isCreating || 
@@ -536,18 +574,26 @@ export default function DashboardPage() {
                       !projectName.trim() ||
                       (creationMode === 'upload' && !uploadFile)
                     }
-                    variant="primary"
-                    isLoading={isCreating || isUploading}
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium hover:from-blue-500 hover:to-indigo-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
-                    {!(isCreating || isUploading) && <Plus className="w-4 h-4 mr-2" />}
-                    Create Project
-                  </Button>
+                    {(isCreating || isUploading) ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-4 h-4" />
+                        Create Project
+                      </>
+                    )}
+                  </button>
                 </div>
               </form>
-            </GlassCard>
-          </FadeIn>
-        </div>
-      )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

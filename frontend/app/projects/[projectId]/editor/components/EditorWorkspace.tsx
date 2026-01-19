@@ -1,28 +1,25 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { motion } from 'framer-motion';
 import { useEditorState } from '../hooks/useEditorState';
 import { useToast } from '@/components/ui/Toast';
-import { HeaderBar } from './HeaderBar';
+import { EditorHeader } from './EditorHeader';
 import { LaTeXEditor } from './LaTeXEditor';
 import { PDFPreview } from './PDFPreview';
 import { AiPanel } from './ai/AiPanel';
+import { FileText, Sparkles } from 'lucide-react';
 
 /**
- * PHASE 3: Main Editor Workspace Component
- * REDESIGNED: Non-blocking loading with toast notifications
+ * REFACTORED EDITOR WORKSPACE
  * 
- * Per userflow.md Section 2.5:
- * - Layout: LEFT (LaTeX Editor) | RIGHT (PDF Preview)
- * - Manages editor state via useEditorState hook
- * - Handles version switching, saving, and editing
- * 
- * UX IMPROVEMENTS:
- * - Toast notifications for background processes
- * - Non-blocking loading states
- * - Users can continue working while operations run
+ * Clean, minimal design with:
+ * - Floating header with glassmorphism
+ * - Smooth panel transitions
+ * - Modern empty states
+ * - Toast notifications for feedback
  */
 
 interface EditorWorkspaceProps {
@@ -35,7 +32,6 @@ export function EditorWorkspace({ projectId, initialVersionId }: EditorWorkspace
   const router = useRouter();
   const searchParams = useSearchParams();
   const { addToast, updateToast, removeToast } = useToast();
-  const toastIdRef = useRef<string | null>(null);
   
   const {
     currentVersionId,
@@ -47,14 +43,13 @@ export function EditorWorkspace({ projectId, initialVersionId }: EditorWorkspace
     error,
     currentVersion,
     loadVersion,
-    loadLatestVersion,
     updateDraft,
     switchVersion,
     saveEdit,
     compileVersion,
   } = useEditorState(projectId, getToken);
 
-  // Panel mode: 'pdf' or 'ai' (mutually exclusive)
+  // Panel mode: 'pdf' or 'ai'
   const [panelMode, setPanelMode] = React.useState<'pdf' | 'ai'>('pdf');
 
   // Update URL when version changes
@@ -143,9 +138,19 @@ export function EditorWorkspace({ projectId, initialVersionId }: EditorWorkspace
   }, [initialVersionId, loadVersion]);
 
   return (
-    <div className="flex flex-col h-screen bg-dark-950">
-      {/* Unified Header Bar with glassmorphism */}
-      <HeaderBar
+    <div className="flex flex-col h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950">
+      {/* Background Elements */}
+      <div className="fixed inset-0 -z-10 pointer-events-none overflow-hidden">
+        {/* Grid pattern */}
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:64px_64px]" />
+        
+        {/* Gradient orbs */}
+        <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[100px]" />
+        <div className="absolute bottom-0 left-1/4 w-[500px] h-[500px] bg-purple-500/5 rounded-full blur-[100px]" />
+      </div>
+
+      {/* Header */}
+      <EditorHeader
         projectId={projectId}
         currentVersionId={currentVersionId}
         currentVersionStatus={currentVersion?.status || null}
@@ -159,38 +164,17 @@ export function EditorWorkspace({ projectId, initialVersionId }: EditorWorkspace
         onVersionSwitch={handleVersionSwitch}
       />
       
-      {/* Main Editor Layout: LEFT (Editor) | RIGHT (PDF or AI - mutually exclusive) */}
-      <div className="flex-1 flex overflow-hidden relative">
-        {/* Vertical separator with gradient */}
-        <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-primary-500/30 to-transparent z-20 pointer-events-none"></div>
-        
-        {/* LEFT: LaTeX Editor or Empty State */}
-        <div className="w-1/2 border-r border-white/5">
+      {/* Main Editor Layout */}
+      <div className="flex-1 flex overflow-hidden p-4 gap-4">
+        {/* LEFT: LaTeX Editor */}
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.1 }}
+          className="w-1/2 rounded-2xl overflow-hidden border border-white/10 bg-gray-900/50 backdrop-blur-sm shadow-2xl"
+        >
           {!currentVersionId && !isLoading ? (
-            /* Empty State - No Version Loaded */
-            <div className="flex h-full items-center justify-center bg-gradient-to-br from-dark-950 via-dark-900 to-dark-950 relative overflow-hidden">
-              {/* Animated background gradient */}
-              <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary-500/10 rounded-full blur-3xl animate-pulse"></div>
-              <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-secondary-500/10 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
-              
-              <div className="text-center max-w-md px-6 relative z-10">
-                <div className="glass-card p-8 rounded-2xl shadow-glow">
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-primary flex items-center justify-center">
-                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                  </div>
-                  <h3 className="text-xl font-semibold text-white mb-2">No Version Loaded</h3>
-                  <p className="text-sm text-dark-400 mb-4">
-                    Load a version using the selector above to begin editing your resume.
-                  </p>
-                  <div className="flex items-center justify-center gap-2 text-xs text-dark-500">
-                    <div className="w-2 h-2 rounded-full bg-accent-500 animate-pulse"></div>
-                    <span>Ready to start</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <EmptyEditorState />
           ) : (
             <LaTeXEditor
               value={latexDraft}
@@ -199,53 +183,101 @@ export function EditorWorkspace({ projectId, initialVersionId }: EditorWorkspace
               isLoading={isLoading}
             />
           )}
-        </div>
+        </motion.div>
 
-        {/* RIGHT: PDF Preview or AI Panel (mutually exclusive) */}
-        <div className="w-1/2 relative overflow-hidden">
-          <div className="absolute inset-0">
-            {/* PDF Preview with fade transition */}
-            <div
-              className={`absolute inset-0 transition-opacity duration-300 ease-in-out ${
-                panelMode === 'pdf' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
-              }`}
-            >
-              <PDFPreview
-                pdfUrl={currentVersion?.pdfUrl || null}
-                versionId={currentVersionId}
-              />
-            </div>
-            {/* AI Panel with fade transition */}
-            <div
-              className={`absolute inset-0 transition-opacity duration-300 ease-in-out ${
-                panelMode === 'ai' ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
-              }`}
-            >
-              <AiPanel 
-                projectId={projectId} 
-                baseVersionId={currentVersionId}
-                baseLatexContent={latexDraft}
-                onVersionChange={async (newVersionId) => {
-                  await switchVersion(newVersionId);
-                  updateUrlWithVersion(newVersionId);
-                }}
-                getToken={getToken}
-                isEditorLocked={isSaving || isCompiling}
-              />
-            </div>
+        {/* RIGHT: PDF Preview or AI Panel */}
+        <motion.div 
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2 }}
+          className="w-1/2 rounded-2xl overflow-hidden border border-white/10 bg-gray-900/50 backdrop-blur-sm shadow-2xl relative"
+        >
+          {/* PDF Preview */}
+          <div
+            className={`absolute inset-0 transition-all duration-300 ease-out ${
+              panelMode === 'pdf' 
+                ? 'opacity-100 translate-x-0 z-10' 
+                : 'opacity-0 -translate-x-4 z-0 pointer-events-none'
+            }`}
+          >
+            <PDFPreview
+              pdfUrl={currentVersion?.pdfUrl || null}
+              versionId={currentVersionId}
+            />
           </div>
-        </div>
+          
+          {/* AI Panel */}
+          <div
+            className={`absolute inset-0 transition-all duration-300 ease-out ${
+              panelMode === 'ai' 
+                ? 'opacity-100 translate-x-0 z-10' 
+                : 'opacity-0 translate-x-4 z-0 pointer-events-none'
+            }`}
+          >
+            <AiPanel 
+              projectId={projectId} 
+              baseVersionId={currentVersionId}
+              baseLatexContent={latexDraft}
+              onVersionChange={async (newVersionId) => {
+                await switchVersion(newVersionId);
+                updateUrlWithVersion(newVersionId);
+              }}
+              getToken={getToken}
+              isEditorLocked={isSaving || isCompiling}
+            />
+          </div>
+        </motion.div>
       </div>
 
-      {/* Inline Loading Indicator - Non-blocking, shows only during initial load */}
+      {/* Loading Overlay - Only on initial load */}
       {isLoading && !currentVersionId && (
-        <div className="fixed bottom-8 right-8 z-40 animate-slide-up">
-          <div className="glass-card px-5 py-3 rounded-xl shadow-glow flex items-center gap-3">
-            <div className="w-4 h-4 border-2 border-primary-400 border-t-transparent rounded-full animate-spin" />
-            <span className="text-sm font-medium text-white">Loading version...</span>
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed bottom-6 right-6 z-50"
+        >
+          <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-900/90 backdrop-blur-xl border border-white/10 shadow-2xl">
+            <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+            <span className="text-sm text-gray-300">Loading version...</span>
+          </div>
+        </motion.div>
+      )}
+    </div>
+  );
+}
+
+// Empty State Component
+function EmptyEditorState() {
+  return (
+    <div className="h-full flex items-center justify-center p-8">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="text-center max-w-md"
+      >
+        {/* Icon */}
+        <div className="relative mx-auto w-20 h-20 mb-6">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-2xl blur-xl" />
+          <div className="relative w-full h-full bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-2xl border border-white/10 flex items-center justify-center">
+            <FileText className="w-8 h-8 text-blue-400" />
           </div>
         </div>
-      )}
+        
+        {/* Text */}
+        <h3 className="text-xl font-semibold text-white mb-2">No Version Loaded</h3>
+        <p className="text-gray-400 text-sm mb-6">
+          Select a version from the dropdown above to start editing your resume.
+        </p>
+        
+        {/* Hint */}
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10">
+          <Sparkles className="w-4 h-4 text-purple-400" />
+          <span className="text-sm text-gray-400">
+            Or switch to <span className="text-purple-400 font-medium">AI mode</span> to generate a new version
+          </span>
+        </div>
+      </motion.div>
     </div>
   );
 }

@@ -4,8 +4,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { FileText } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { apiUrl } from '@/lib/api';
 import { handleHttpError, getErrorMessage } from '@/lib/errorHandling';
+import { GradientAIChatInput } from '@/components/ui/gradient-ai-chat-input';
 
 /**
  * CHAT MODE — CONVERSATIONAL AI ASSISTANT
@@ -64,9 +67,7 @@ export function ChatMode({
   jdError,
   onRemoveJd,
 }: ChatModeProps) {
-  const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -76,19 +77,17 @@ export function ChatMode({
     scrollToBottom();
   }, [messages]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isLoading || isLocked) return;
+  const handleSendMessage = async (message: string) => {
+    if (!message.trim() || isLoading || isLocked) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: input.trim(),
+      content: message.trim(),
       timestamp: new Date(),
     };
 
     setMessages((prev) => [...prev, userMessage]);
-    setInput('');
     setIsLoading(true);
 
     try {
@@ -97,7 +96,6 @@ export function ChatMode({
         throw new Error('Not authenticated');
       }
 
-      // Send to backend chat API
       const response = await fetch(apiUrl('/api/ai/chat'), {
         method: 'POST',
         headers: {
@@ -144,13 +142,6 @@ export function ChatMode({
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit(e);
     }
   };
 
@@ -226,66 +217,80 @@ export function ChatMode({
       </div>
 
       {/* Input Area */}
-      <div className="flex-shrink-0 border-t border-gray-700 p-4 bg-gray-900">
-        <form onSubmit={handleSubmit} className="flex flex-col gap-2">
-          <textarea
-            ref={textareaRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={
-              isLocked
-                ? 'Editor is locked during AI processing...'
-                : 'Ask me anything about your resume...'
+      <div className="flex-shrink-0 border-t border-gray-700/50 p-4 bg-gray-900/95 backdrop-blur-sm">
+        <GradientAIChatInput
+          placeholder={
+            isLocked
+              ? 'Editor is locked during AI processing...'
+              : 'Ask me anything about your resume...'
+          }
+          onSend={handleSendMessage}
+          disabled={isLocked || isLoading}
+          showDropdown={false}
+          showAttachButton={false}
+          enableShadows={true}
+          mainGradient={{
+            light: {
+              topLeft: "#93C5FD",
+              topRight: "#A5B4FC",
+              bottomRight: "#C4B5FD",
+              bottomLeft: "#A5B4FC"
+            },
+            dark: {
+              topLeft: "#3B82F6",
+              topRight: "#6366F1",
+              bottomRight: "#7C3AED",
+              bottomLeft: "#4F46E5"
             }
-            disabled={isLocked || isLoading}
-            className="w-full px-4 py-3 bg-gray-800 text-gray-100 rounded-lg border border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-            rows={3}
-          />
-          <div className="flex items-center justify-between">
-            {/* Left: JD Button */}
-            <div className="flex items-center gap-2">
-              <button
+          }}
+          outerGradient={{
+            light: {
+              topLeft: "#60A5FA",
+              topRight: "#818CF8",
+              bottomRight: "#A78BFA",
+              bottomLeft: "#818CF8"
+            },
+            dark: {
+              topLeft: "#2563EB",
+              topRight: "#4F46E5",
+              bottomRight: "#6D28D9",
+              bottomLeft: "#4338CA"
+            }
+          }}
+          customButtons={
+            <>
+              {/* JD Button */}
+              <motion.button
                 type="button"
                 onClick={onOpenJdModal}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-700 bg-gray-800 text-gray-300 hover:bg-gray-700 hover:border-gray-600 transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-full border border-gray-600 bg-gray-800/50 text-gray-300 hover:bg-gray-700 hover:border-gray-500 transition-all"
                 title={hasJd ? 'Edit Job Description' : 'Add Job Description'}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
+                <FileText className="w-3.5 h-3.5" />
                 {hasJd ? 'JD' : 'Add JD'}
-              </button>
+              </motion.button>
               
               {/* JD Status Badge */}
               {isLoadingJds ? (
                 <span className="text-xs text-gray-500">Loading...</span>
               ) : jdError ? (
-                <span className="text-xs text-red-400">Error loading JD</span>
+                <span className="text-xs text-red-400">Error</span>
               ) : hasJd ? (
-                <button
+                <motion.button
                   type="button"
                   onClick={onRemoveJd}
-                  className="text-xs text-blue-400 hover:text-blue-300"
+                  className="text-xs text-blue-400 hover:text-blue-300 px-2 py-1 rounded-full bg-blue-500/10 border border-blue-500/20"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                 >
                   ✓ Loaded
-                </button>
+                </motion.button>
               ) : null}
-            </div>
-
-            {/* Right: Send Button */}
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-500">Enter to send</span>
-              <button
-                type="submit"
-                disabled={!input.trim() || isLoading || isLocked}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm"
-              >
-                {isLoading ? 'Sending...' : 'Send'}
-              </button>
-            </div>
-          </div>
-        </form>
+            </>
+          }
+        />
       </div>
     </div>
   );

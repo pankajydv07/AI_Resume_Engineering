@@ -99,10 +99,53 @@ No custom logic allowed here.
 - Create new project
 - Open existing project
 - Delete project (optional later)
+- Access Settings (API key management)
 
 **Disallowed**
 - Resume editing
 - AI actions
+
+---
+
+### 2.3.1 Settings / API Key Management (`/dashboard/settings`)
+
+**Purpose**
+- Manage AI model provider credentials
+- Configure Azure OpenAI access
+
+**Visible Elements**
+- List of configured API keys
+  - Provider name (Azure OpenAI)
+  - Endpoint URL
+  - Status (Valid / Invalid / Expired)
+  - Last validated timestamp
+- "Add New API Key" button
+
+**Add API Key Flow**
+1. User clicks "Add New API Key"
+2. Modal/Form appears:
+   - Provider: Azure OpenAI (for now, only option)
+   - API Key input field
+   - Endpoint URL input field
+3. User submits
+4. Backend validates key
+5. If valid: Key saved, modal closes
+6. If invalid: Show error message inline
+
+**Validation States**
+- ✅ Valid: Green checkmark
+- ❌ Invalid: Red X with error message
+- ⚠️ Expired: Yellow warning icon
+
+**Allowed Actions**
+- Add new API key
+- Delete API key
+- Re-validate existing key
+- View validation status
+
+**Disallowed**
+- View raw API key after saving
+- Edit API key (delete and re-add instead)
 
 ---
 
@@ -223,10 +266,21 @@ Triggered from Resume Editor.
   - Experience
   - Projects
   - Skills
+- AI Model Selection:
+  - DeepSeek (default, free)
+  - Azure OpenAI openai/gpt-5 (requires API key)
 
 **Purpose**
 - Give user control
 - Prevent AI overreach
+- Allow model choice based on preference
+
+**API Key Management**
+- If Azure OpenAI is selected:
+  - Check if user has configured API key
+  - If no key: Show "Configure API Key" button
+  - If key exists but invalid: Show warning with re-validation option
+  - If key valid: Proceed with tailoring
 
 ---
 

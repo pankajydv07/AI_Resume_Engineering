@@ -1,5 +1,7 @@
 'use client';
 
+import { motion } from 'framer-motion';
+import { FileText, Check, Zap, CheckCircle2 } from 'lucide-react';
 import { SectionProposal, SectionType } from './ProposalModal';
 import { MonacoDiffViewer } from './MonacoDiffViewer';
 
@@ -28,32 +30,34 @@ export function SectionDiffViewer({ proposal, isAccepted, onToggle }: SectionDif
   const hasChanges = changeType === 'modified';
 
   return (
-    <div className="glass-card border border-white/10 rounded-xl overflow-hidden shadow-glass hover:border-white/20 transition-all duration-200">
-      {/* Section Header - Dark theme */}
+    <motion.div 
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-gray-900/80 border border-gray-700/50 rounded-xl overflow-hidden hover:border-gray-600/50 transition-all duration-200"
+    >
+      {/* Section Header */}
       <div className={`flex items-center justify-between px-5 py-4 border-b ${
         hasChanges 
-          ? 'border-primary-500/30 bg-gradient-to-r from-primary-500/10 to-secondary-500/10' 
-          : 'border-white/10 bg-dark-900/50'
+          ? 'border-blue-500/30 bg-gradient-to-r from-blue-500/10 to-indigo-500/10' 
+          : 'border-gray-700/50 bg-gray-900/50'
       }`}>
         <div className="flex items-center space-x-3">
           {/* Icon based on section type */}
           <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-            hasChanges ? 'bg-gradient-primary shadow-glow' : 'bg-dark-800 border border-white/10'
+            hasChanges ? 'bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/20' : 'bg-gray-800 border border-gray-700'
           }`}>
-            <svg className={`w-6 h-6 ${hasChanges ? 'text-white' : 'text-dark-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
+            <FileText className={`w-5 h-5 ${hasChanges ? 'text-white' : 'text-gray-400'}`} />
           </div>
           <div>
-            <span className="font-bold text-dark-100 text-lg">{sectionLabel}</span>
+            <span className="font-bold text-white text-lg">{sectionLabel}</span>
             {!hasChanges && (
-              <span className="ml-2 text-xs bg-dark-800 text-dark-400 px-3 py-1 rounded-full font-medium border border-white/10">
-                ✓ No changes
+              <span className="ml-2 text-xs bg-gray-800 text-gray-400 px-3 py-1 rounded-full font-medium border border-gray-700 inline-flex items-center gap-1">
+                <Check className="w-3 h-3" /> No changes
               </span>
             )}
             {hasChanges && (
-              <span className="ml-2 text-xs bg-gradient-primary text-white px-3 py-1 rounded-full font-medium shadow-glow">
-                ⚡ Modified
+              <span className="ml-2 text-xs bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-3 py-1 rounded-full font-medium shadow-lg inline-flex items-center gap-1">
+                <Zap className="w-3 h-3" /> Modified
               </span>
             )}
           </div>
@@ -61,22 +65,36 @@ export function SectionDiffViewer({ proposal, isAccepted, onToggle }: SectionDif
 
         {hasChanges && (
           <label className="flex items-center space-x-3 cursor-pointer group">
-            <span className="text-sm text-dark-300 font-medium group-hover:text-primary-400 transition-colors">
+            <span className="text-sm text-gray-400 font-medium group-hover:text-blue-400 transition-colors">
               {isAccepted ? 'Accepted' : 'Accept changes'}
             </span>
-            <input
-              type="checkbox"
-              checked={isAccepted}
-              onChange={() => onToggle(sectionType)}
-              className="w-5 h-5 text-primary-500 bg-dark-800 border-white/20 rounded focus:ring-2 focus:ring-primary-500 cursor-pointer"
-            />
+            <div className="relative">
+              <input
+                type="checkbox"
+                checked={isAccepted}
+                onChange={() => onToggle(sectionType)}
+                className="sr-only"
+              />
+              <motion.div
+                className={`w-6 h-6 rounded-md border-2 flex items-center justify-center cursor-pointer transition-colors ${
+                  isAccepted 
+                    ? 'bg-gradient-to-br from-green-500 to-emerald-600 border-green-500' 
+                    : 'bg-gray-800 border-gray-600 hover:border-gray-500'
+                }`}
+                onClick={() => onToggle(sectionType)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                {isAccepted && <CheckCircle2 className="w-4 h-4 text-white" />}
+              </motion.div>
+            </div>
           </label>
         )}
       </div>
 
-      {/* Diff Content - Dark theme */}
+      {/* Diff Content */}
       {hasChanges ? (
-        <div className="h-96 bg-dark-950">
+        <div className="h-96 bg-gray-950">
           <MonacoDiffViewer
             originalContent={before}
             modifiedContent={after}
@@ -87,14 +105,14 @@ export function SectionDiffViewer({ proposal, isAccepted, onToggle }: SectionDif
           />
         </div>
       ) : (
-        <div className="p-6 bg-dark-900">
-          <div className="glass-card p-4 rounded-lg border border-white/10">
-            <pre className="text-sm font-mono whitespace-pre-wrap text-dark-300 overflow-auto max-h-32">
+        <div className="p-6 bg-gray-950">
+          <div className="bg-gray-900/80 p-4 rounded-lg border border-gray-700/50">
+            <pre className="text-sm font-mono whitespace-pre-wrap text-gray-400 overflow-auto max-h-32">
               {before}
             </pre>
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

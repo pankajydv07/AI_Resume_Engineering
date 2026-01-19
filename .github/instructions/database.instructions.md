@@ -64,6 +64,10 @@ These enums must be used exactly as defined.
 - BALANCED
 - AGGRESSIVE
 
+### AIModelProvider
+- DEEPSEEK
+- AZURE_OPENAI
+
 ---
 
 ## 4. TABLE DEFINITIONS
@@ -228,7 +232,42 @@ Rules:
 
 ---
 
-### 4.8 VersionDiff
+### 4.8 UserAPIKey
+
+Stores user's AI model provider API keys.
+
+  UserAPIKey
+  id UUID (PK)
+  userId UUID (FK → User)
+  provider AIModelProvider
+  apiKey STRING
+  endpoint STRING (nullable)
+  isValid BOOLEAN (default: true)
+  lastValidated TIMESTAMP (nullable)
+  validationError STRING (nullable)
+  createdAt TIMESTAMP
+  updatedAt TIMESTAMP
+
+
+Purpose:
+- Store user's personal AI provider credentials
+- Enable model selection (DeepSeek vs Azure OpenAI)
+- Validate API keys before use
+
+Rules:
+- One key per provider per user: @@unique([userId, provider])
+- API keys are stored as plain strings (encryption at transport layer)
+- isValid tracks last validation status
+- validationError stores last error message if invalid/expired
+- endpoint allows custom Azure OpenAI endpoint URLs
+
+Notes:
+- AZURE_OPENAI requires: apiKey + endpoint
+- DEEPSEEK uses system-wide Nebius credentials (no user key needed)
+
+---
+
+### 4.9 VersionDiff
 
 Explains differences between resume versions.
 
@@ -254,12 +293,13 @@ Purpose:
 
 User
 └── ResumeProject
-├── ResumeVersion (self-referencing tree)
-│ └── ResumeSection
-├── JobDescription
-├── AIJob
-│ └── ProposedVersion (1:1)
-└── VersionDiff
+    ├── ResumeVersion (self-referencing tree)
+    │   └── ResumeSection
+    ├── JobDescription
+    ├── AIJob
+    │   └── ProposedVersion (1:1)
+    └── VersionDiff
+└── UserAPIKey
 
 yaml
 Copy code

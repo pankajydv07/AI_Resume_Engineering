@@ -35,8 +35,11 @@ All components operate on well-defined contracts (TypeScript interfaces, Prisma 
 
 1. **Clone and configure environment**:
    ```bash
+   # Copy the example environment file
    cp .env.example .env
-   # Edit .env and add your API keys (see .env.example for details)
+   
+   # Edit .env and add your API keys
+   # See .env.example for detailed descriptions of each variable
    ```
 
 2. **Start with Docker**:
@@ -50,15 +53,20 @@ All components operate on well-defined contracts (TypeScript interfaces, Prisma 
 
 ### Environment Variables
 
-The application requires the following environment variables. See `.env.example` for detailed descriptions:
+The application uses a single `.env` file in the root directory for all configuration.
 
-**Required**:
-- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` - Clerk authentication (frontend)
+**Required Variables**:
+- `CLERK_PUBLISHABLE_KEY` - Clerk authentication (used by both frontend and backend)
 - `CLERK_SECRET_KEY` - Clerk authentication (backend)
 - `NEXT_PUBLIC_BACKEND_URL` - Backend API URL (default: http://localhost:3001)
 - `DATABASE_URL` - PostgreSQL connection string
 - `NEBIUS_API_KEY` - AI service API key
 - `CLOUDINARY_URL` - PDF storage (or individual Cloudinary keys)
+
+**Configuration Files**:
+- Root: `.env.example` → copy to `.env` (used by all services)
+- Backend: Automatically reads from root `.env` or `backend/.env`
+- Frontend: Automatically reads from root `.env` or `frontend/.env.local`
 
 For detailed setup instructions, see [DOCKER.md](DOCKER.md).
 

@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, MessageSquare, Sparkles, AlertTriangle, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { DiffViewer } from './DiffViewer';
 import { SectionDiffViewer } from './SectionDiffViewer';
 import { ProposalActions } from './ProposalActions';
@@ -266,135 +268,156 @@ export function ProposalModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-dark-950/90 backdrop-blur-md p-4">
-      <div className="glass-card w-full max-w-[98vw] h-[95vh] max-h-[95vh] flex flex-col overflow-hidden border border-white/10 shadow-glass">
-        {/* Header - Matching website dark theme */}
-        <div className="flex-shrink-0 flex items-center justify-between px-4 md:px-6 py-3 md:py-4 border-b border-white/10 bg-dark-900/50">
-          <div className="flex items-center space-x-2 md:space-x-4 flex-wrap gap-2">
-            <div className="flex items-center gap-2 md:gap-3">
-              <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-primary rounded-xl flex items-center justify-center shadow-glow">
-                <svg className="w-5 h-5 md:w-6 md:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                </svg>
+    <AnimatePresence>
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+      >
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          transition={{ type: "spring", damping: 25, stiffness: 300 }}
+          className="w-full max-w-[98vw] h-[95vh] max-h-[95vh] flex flex-col overflow-hidden rounded-2xl border border-gray-700/50 bg-gradient-to-br from-gray-900 via-gray-900 to-gray-950 shadow-2xl"
+        >
+          {/* Header */}
+          <div className="flex-shrink-0 flex items-center justify-between px-4 md:px-6 py-3 md:py-4 border-b border-gray-700/50 bg-gray-900/80 backdrop-blur-sm">
+            <div className="flex items-center space-x-2 md:space-x-4 flex-wrap gap-2">
+              <div className="flex items-center gap-2 md:gap-3">
+                <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+                  <Sparkles className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-base md:text-lg font-bold text-white">
+                    AI Resume Proposal
+                  </h2>
+                  <p className="text-xs text-gray-400 hidden sm:block">Review and accept changes</p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-base md:text-lg font-bold text-gradient">
-                  AI Resume Proposal
-                </h2>
-                <p className="text-xs text-dark-400 hidden sm:block">Review and accept changes</p>
-              </div>
+              {/* Chat toggle */}
+              <motion.button
+                type="button"
+                onClick={() => setShowChat(!showChat)}
+                className={`px-3 md:px-4 py-1.5 md:py-2 text-xs md:text-sm font-medium rounded-lg transition-all duration-200 flex items-center gap-2 ${
+                  showChat
+                    ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/20'
+                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700'
+                }`}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <MessageSquare className="w-4 h-4" />
+                {showChat ? 'Chat Open' : 'Open Chat'}
+              </motion.button>
             </div>
-            {/* GOAL 6: Chat toggle - Dark theme */}
-            <button
+            <motion.button
               type="button"
-              onClick={() => setShowChat(!showChat)}
-              className={`px-3 md:px-4 py-1.5 md:py-2 text-xs md:text-sm font-medium rounded-lg transition-all duration-200 ${
-                showChat
-                  ? 'bg-gradient-primary text-white shadow-glow'
-                  : 'glass text-dark-100 hover:bg-white/10'
-              }`}
+              onClick={onClose}
+              className="text-gray-400 hover:text-white transition-colors p-2 hover:bg-gray-800 rounded-lg"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
-              {showChat ? '✓ Chat' : '💬 Chat'}
-            </button>
+              <X className="w-6 h-6" />
+            </motion.button>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-dark-400 hover:text-dark-100 transition-colors p-2 hover:bg-white/5 rounded-lg"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
 
-        {/* Content */}
-        <div className="flex-1 min-h-0 flex bg-dark-900 overflow-hidden">
-          {/* Main proposal area */}
-          <div className={`flex flex-col overflow-hidden ${showChat ? 'w-full lg:w-2/3' : 'w-full'}`}>
-          {isLoading && (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center">
-                <div className="relative w-16 h-16 mx-auto mb-4">
-                  <div className="absolute inset-0 border-4 border-primary-500/20 rounded-full"></div>
-                  <div className="absolute inset-0 border-4 border-primary-500 rounded-full animate-spin border-t-transparent"></div>
-                </div>
-                <p className="text-dark-100 font-medium">Loading proposal...</p>
-                <p className="text-dark-400 text-sm mt-1">Preparing AI-generated changes</p>
-              </div>
-            </div>
-          )}
-
-          {error && (
-            <div className="flex flex-col items-center justify-center h-full p-4 overflow-auto">
-              <div className="text-center max-w-md glass-card p-6 md:p-8 border border-white/10">
-                <div className="w-12 h-12 md:w-16 md:h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg
-                    className="h-6 w-6 md:h-8 md:w-8 text-red-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                    />
-                  </svg>
-                </div>
-                <h3 className="text-base md:text-lg font-bold text-dark-100 mb-2">Failed to Load Proposal</h3>
-                <p className="text-red-400 text-sm font-medium mb-3">{error}</p>
-                <p className="text-dark-400 text-xs md:text-sm">
-                  The AI job completed, but the proposal could not be retrieved. Please try again or check the AI Jobs page.
-                </p>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="mt-6 px-6 py-2 bg-dark-800 text-dark-100 rounded-lg hover:bg-dark-700 transition-all duration-200 shadow-lg text-sm font-medium border border-white/10"
+          {/* Content */}
+          <div className="flex-1 min-h-0 flex bg-gray-950 overflow-hidden">
+            {/* Main proposal area */}
+            <div className={`flex flex-col overflow-hidden ${showChat ? 'w-full lg:w-2/3' : 'w-full'}`}>
+            {isLoading && (
+              <div className="flex items-center justify-center h-full">
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="text-center"
                 >
-                  Close
-                </button>
+                  <div className="relative w-16 h-16 mx-auto mb-4">
+                    <div className="absolute inset-0 border-4 border-blue-500/20 rounded-full"></div>
+                    <div className="absolute inset-0 border-4 border-blue-500 rounded-full animate-spin border-t-transparent"></div>
+                  </div>
+                  <p className="text-white font-medium">Loading proposal...</p>
+                  <p className="text-gray-400 text-sm mt-1">Preparing AI-generated changes</p>
+                </motion.div>
               </div>
-            </div>
-          )}
+            )}
 
-          {!isLoading && !error && proposedContent && (
-            <div className="flex flex-col h-full overflow-hidden">
-              {/* GOAL 4: Section-based diff view or fallback to full LaTeX */}
-              <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-3 md:p-6">
-                {sectionProposals.length > 0 ? (
-                  <div className="space-y-3 md:space-y-4">
-                    {/* Accept/Reject All Buttons - Dark theme */}
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between glass-card px-4 md:px-6 py-3 md:py-4 border border-white/10 gap-3">
-                      <div className="text-sm flex items-center gap-2 md:gap-3">
-                        <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-primary rounded-xl flex items-center justify-center text-white font-bold text-base md:text-lg shadow-glow">
-                          {acceptedSections.size}
+            {error && (
+              <div className="flex flex-col items-center justify-center h-full p-4 overflow-auto">
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="text-center max-w-md bg-gray-900/80 border border-gray-700/50 rounded-2xl p-6 md:p-8"
+                >
+                  <div className="w-12 h-12 md:w-16 md:h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <AlertTriangle className="h-6 w-6 md:h-8 md:w-8 text-red-400" />
+                  </div>
+                  <h3 className="text-base md:text-lg font-bold text-white mb-2">Failed to Load Proposal</h3>
+                  <p className="text-red-400 text-sm font-medium mb-3">{error}</p>
+                  <p className="text-gray-400 text-xs md:text-sm">
+                    The AI job completed, but the proposal could not be retrieved. Please try again or check the AI Jobs page.
+                  </p>
+                  <motion.button
+                    type="button"
+                    onClick={onClose}
+                    className="mt-6 px-6 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-all duration-200 shadow-lg text-sm font-medium border border-gray-700"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Close
+                  </motion.button>
+                </motion.div>
+              </div>
+            )}
+
+            {!isLoading && !error && proposedContent && (
+              <div className="flex flex-col h-full overflow-hidden">
+                {/* Section-based diff view or fallback to full LaTeX */}
+                <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-3 md:p-6">
+                  {sectionProposals.length > 0 ? (
+                    <div className="space-y-3 md:space-y-4">
+                      {/* Accept/Reject All Buttons */}
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-gray-900/80 border border-gray-700/50 rounded-xl px-4 md:px-6 py-3 md:py-4 gap-3"
+                      >
+                        <div className="text-sm flex items-center gap-2 md:gap-3">
+                          <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-base md:text-lg shadow-lg shadow-blue-500/20">
+                            {acceptedSections.size}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-white text-sm md:text-base">Sections Selected</p>
+                            <p className="text-xs text-gray-400">
+                              {acceptedSections.size} of {sectionProposals.filter(p => p.changeType === 'modified').length} modified
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-semibold text-dark-100 text-sm md:text-base">Sections Selected</p>
-                          <p className="text-xs text-dark-400">
-                            {acceptedSections.size} of {sectionProposals.filter(p => p.changeType === 'modified').length} modified
-                          </p>
+                        <div className="flex space-x-2 md:space-x-3 w-full sm:w-auto">
+                          <motion.button
+                            type="button"
+                            onClick={acceptAll}
+                            className="flex-1 sm:flex-none px-3 md:px-5 py-2 md:py-2.5 text-xs md:text-sm font-medium bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 shadow-lg flex items-center justify-center gap-2"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                            Accept All
+                          </motion.button>
+                          <motion.button
+                            type="button"
+                            onClick={rejectAll}
+                            className="flex-1 sm:flex-none px-3 md:px-5 py-2 md:py-2.5 text-xs md:text-sm font-medium bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-lg hover:from-red-600 hover:to-rose-700 transition-all duration-200 shadow-lg flex items-center justify-center gap-2"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            <XCircle className="w-4 h-4" />
+                            Reject All
+                          </motion.button>
                         </div>
-                      </div>
-                      <div className="flex space-x-2 md:space-x-3 w-full sm:w-auto">
-                        <button
-                          type="button"
-                          onClick={acceptAll}
-                          className="flex-1 sm:flex-none px-3 md:px-5 py-2 md:py-2.5 text-xs md:text-sm font-medium bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-glow"
-                        >
-                          ✓ Accept All
-                        </button>
-                        <button
-                          type="button"
-                          onClick={rejectAll}
-                          className="flex-1 sm:flex-none px-3 md:px-5 py-2 md:py-2.5 text-xs md:text-sm font-medium bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-lg hover:from-red-600 hover:to-rose-700 transition-all duration-200 shadow-lg hover:shadow-glow"
-                        >
-                          ✕ Reject All
-                        </button>
-                      </div>
-                    </div>
+                      </motion.div>
 
                     {/* Section Diffs */}
                     <div className="space-y-2 md:space-y-3">
@@ -419,35 +442,36 @@ export function ProposalModal({
                 )}
               </div>
 
-              {/* Actions */}
-              <div className="flex-shrink-0 p-3 md:p-4 border-t border-white/10 bg-dark-900/80">
-                <ProposalActions
-                  aiJobId={currentJobId}
-                  projectId={projectId}
-                  baseVersionId={baseVersionId}
-                  acceptedSections={Array.from(acceptedSections)}
-                  onAccepted={handleAccept}
-                  onRejected={handleReject}
-                  getToken={getToken}
-                />
+                {/* Actions */}
+                <div className="flex-shrink-0 p-3 md:p-4 border-t border-gray-700/50 bg-gray-900/80">
+                  <ProposalActions
+                    aiJobId={currentJobId}
+                    projectId={projectId}
+                    baseVersionId={baseVersionId}
+                    acceptedSections={Array.from(acceptedSections)}
+                    onAccepted={handleAccept}
+                    onRejected={handleReject}
+                    getToken={getToken}
+                  />
+                </div>
               </div>
+            )}
+          </div>
+
+          {/* Chat panel */}
+          {showChat && (
+            <div className="hidden lg:block w-1/3 h-full border-l border-gray-700/50">
+              <ProposalChat
+                aiJobId={currentJobId}
+                projectId={projectId}
+                onRefineRequest={handleRefineRequest}
+                isRefining={isRefining}
+              />
             </div>
           )}
         </div>
-
-        {/* GOAL 6: Chat panel */}
-        {showChat && (
-          <div className="hidden lg:block w-1/3 h-full border-l border-white/10">
-            <ProposalChat
-              aiJobId={currentJobId}
-              projectId={projectId}
-              onRefineRequest={handleRefineRequest}
-              isRefining={isRefining}
-            />
-          </div>
-        )}
-      </div>
-    </div>
-  </div>
+      </motion.div>
+    </motion.div>
+    </AnimatePresence>
   );
 }

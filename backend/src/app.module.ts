@@ -7,6 +7,7 @@ import { AiJobsModule } from './ai-jobs/ai-jobs.module';
 import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { UsersModule } from './users/users.module';
+import { ApiKeysModule } from './api-keys/api-keys.module';
 
 /**
  * App Module
@@ -47,6 +48,7 @@ import { UsersModule } from './users/users.module';
     VersionsModule,
     JdModule,
     AiJobsModule,
+    ApiKeysModule,
     
     // TODO (PHASE 4+): Add background job processing module (Bull/BullMQ)
   ],

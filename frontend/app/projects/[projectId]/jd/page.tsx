@@ -4,8 +4,10 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import { handleHttpError, getErrorMessage } from '@/lib/errorHandling';
 import { apiUrl } from '@/lib/api';
+import { ArrowLeft, FileText, Calendar, ExternalLink, Briefcase } from 'lucide-react';
 
 /**
  * Job Descriptions Page (/projects/{projectId}/jd)
@@ -47,7 +49,6 @@ export default function JobDescriptionsPage() {
     setError(null);
 
     try {
-      // PHASE 8: Real Clerk JWT authentication
       const token = await getToken();
       
       if (!token) {
@@ -86,104 +87,124 @@ export default function JobDescriptionsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header with Breadcrumbs */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          {/* PHASE 7.2: Breadcrumbs */}
-          <nav className="flex items-center text-sm text-gray-500 mb-2">
-            <Link href="/dashboard" className="hover:text-gray-900 transition">
-              Dashboard
-            </Link>
-            <span className="mx-2">›</span>
-            <Link href={`/projects/${projectId}`} className="hover:text-gray-900 transition">
-              Project
-            </Link>
-            <span className="mx-2">›</span>
-            <span className="text-gray-900 font-medium">Job Descriptions</span>
-          </nav>
-          <h1 className="text-xl font-semibold text-gray-900">Job Descriptions</h1>
-        </div>
-      </header>
+    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950">
+      {/* Background Elements */}
+      <div className="fixed inset-0 -z-10 pointer-events-none overflow-hidden">
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:64px_64px]" />
+        <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-purple-500/5 rounded-full blur-[100px]" />
+        <div className="absolute bottom-0 left-1/4 w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[100px]" />
+      </div>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-24">
+        {/* Header with Breadcrumbs */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <nav className="flex items-center gap-2 text-sm text-gray-500 mb-4">
+            <Link href="/dashboard" className="hover:text-white transition">
+              Dashboard
+            </Link>
+            <span>›</span>
+            <Link href={`/projects/${projectId}`} className="hover:text-white transition">
+              Project
+            </Link>
+            <span>›</span>
+            <span className="text-white">Job Descriptions</span>
+          </nav>
+          <div className="flex items-center gap-4">
+            <Link
+              href={`/projects/${projectId}`}
+              className="flex items-center gap-2 text-gray-400 hover:text-white transition group"
+            >
+              <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+            </Link>
+            <h1 className="text-2xl font-bold text-white">Job Descriptions</h1>
+          </div>
+        </motion.div>
+
         {/* Loading State */}
         {isLoading && (
-          <div className="bg-white rounded-lg shadow p-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-2xl bg-gray-900/50 backdrop-blur-sm border border-white/10 p-8"
+          >
             <div className="flex items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-600 border-t-transparent"></div>
-              <span className="ml-3 text-gray-600">Loading job descriptions...</span>
+              <div className="w-10 h-10 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+              <span className="ml-4 text-gray-300">Loading job descriptions...</span>
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* Error State */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <p className="text-sm text-red-800">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-2xl bg-red-500/10 border border-red-500/20 p-4 mb-6"
+          >
+            <p className="text-sm text-red-300">
               <strong>Error:</strong> {error}
             </p>
-          </div>
+          </motion.div>
         )}
 
         {/* Empty State */}
         {!isLoading && !error && jds.length === 0 && (
-          <div className="bg-white rounded-lg shadow">
-            <div className="p-12 text-center">
-              <svg
-                className="mx-auto h-16 w-16 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-              <h3 className="mt-6 text-lg font-medium text-gray-900">No Job Descriptions Yet</h3>
-              <p className="mt-2 text-sm text-gray-500 max-w-md mx-auto">
-                Job descriptions are used to tailor your resume for specific positions. Add them from the editor's JD panel.
-              </p>
-              <div className="mt-6">
-                <Link
-                  href={`/projects/${projectId}/editor`}
-                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition"
-                >
-                  Go to Editor
-                </Link>
-              </div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-2xl bg-gray-900/50 backdrop-blur-sm border border-white/10 text-center py-16"
+          >
+            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center mx-auto mb-6">
+              <Briefcase className="w-10 h-10 text-purple-400" />
             </div>
-          </div>
+            <h3 className="text-2xl font-bold text-white mb-2">No Job Descriptions Yet</h3>
+            <p className="text-gray-400 mb-6 max-w-md mx-auto">
+              Job descriptions are used to tailor your resume for specific positions. Add them from the editor's JD panel.
+            </p>
+            <Link
+              href={`/projects/${projectId}/editor`}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium hover:from-purple-500 hover:to-pink-500 transition-all shadow-lg shadow-purple-500/20"
+            >
+              <ExternalLink className="w-4 h-4" />
+              Go to Editor
+            </Link>
+          </motion.div>
         )}
 
         {/* JD List */}
         {!isLoading && !error && jds.length > 0 && (
           <div className="space-y-4">
-            {jds.map((jd) => (
-              <div key={jd.jdId} className="bg-white rounded-lg shadow p-6">
+            {jds.map((jd, index) => (
+              <motion.div
+                key={jd.jdId}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                className="rounded-2xl bg-gray-900/50 backdrop-blur-sm border border-white/10 p-6 hover:border-white/20 transition-colors"
+              >
                 <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-500">
-                      Added: {formatDate(jd.createdAt)}
-                    </p>
+                  <div className="flex items-center gap-2 text-sm text-gray-400">
+                    <Calendar className="w-4 h-4" />
+                    <span>Added: {formatDate(jd.createdAt)}</span>
                   </div>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-purple-500/20 text-purple-300">
                     {jd.jdId.substring(0, 8)}
                   </span>
                 </div>
-                <div className="text-sm text-gray-700 whitespace-pre-wrap">
+                <div className="text-sm text-gray-300 whitespace-pre-wrap leading-relaxed">
                   {truncateText(jd.rawText)}
                 </div>
                 {jd.rawText.length > 150 && (
-                  <button className="mt-3 text-sm text-blue-600 hover:text-blue-700 font-medium">
+                  <button className="mt-3 text-sm text-purple-400 hover:text-purple-300 font-medium transition-colors">
                     View Full Description
                   </button>
                 )}
-              </div>
+              </motion.div>
             ))}
           </div>
         )}

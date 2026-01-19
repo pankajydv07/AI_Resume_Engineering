@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { Send, Loader2, MessageCircle } from 'lucide-react';
 
 /**
  * GOAL 6: Chat-driven iteration component
@@ -63,11 +65,14 @@ export function ProposalChat({
   };
 
   return (
-    <div className="flex flex-col h-full border-l border-gray-200 bg-gray-50">
+    <div className="flex flex-col h-full bg-gray-950">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-200 bg-white">
-        <h3 className="text-sm font-semibold text-gray-900">Refine Proposal</h3>
-        <p className="text-xs text-gray-500 mt-1">
+      <div className="px-4 py-3 border-b border-gray-700/50 bg-gray-900/80">
+        <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+          <MessageCircle className="w-4 h-4 text-blue-400" />
+          Refine Proposal
+        </h3>
+        <p className="text-xs text-gray-400 mt-1">
           Chat with AI to improve the proposal
         </p>
       </div>
@@ -75,19 +80,21 @@ export function ProposalChat({
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {messages.map((message, idx) => (
-          <div
+          <motion.div
             key={idx}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
             className={`flex ${
               message.role === 'user' ? 'justify-end' : 'justify-start'
             }`}
           >
             <div
-              className={`max-w-[80%] rounded-lg px-4 py-2 ${
+              className={`max-w-[80%] rounded-xl px-4 py-2 ${
                 message.role === 'user'
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white'
                   : message.role === 'assistant'
-                  ? 'bg-white border border-gray-200 text-gray-900'
-                  : 'bg-yellow-50 border border-yellow-200 text-yellow-900'
+                  ? 'bg-gray-800 border border-gray-700 text-gray-200'
+                  : 'bg-amber-500/10 border border-amber-500/30 text-amber-200'
               }`}
             >
               <p className="text-sm whitespace-pre-wrap">{message.content}</p>
@@ -95,33 +102,33 @@ export function ProposalChat({
                 className={`text-xs mt-1 ${
                   message.role === 'user'
                     ? 'text-blue-200'
-                    : 'text-gray-400'
+                    : 'text-gray-500'
                 }`}
               >
                 {message.timestamp.toLocaleTimeString()}
               </p>
             </div>
-          </div>
+          </motion.div>
         ))}
         {isRefining && (
-          <div className="flex justify-start">
-            <div className="bg-white border border-gray-200 rounded-lg px-4 py-2">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex justify-start"
+          >
+            <div className="bg-gray-800 border border-gray-700 rounded-xl px-4 py-3">
               <div className="flex items-center space-x-2">
-                <div className="animate-pulse flex space-x-1">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                </div>
-                <span className="text-xs text-gray-500">AI is refining...</span>
+                <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
+                <span className="text-xs text-gray-400">AI is refining...</span>
               </div>
             </div>
-          </div>
+          </motion.div>
         )}
         <div ref={messagesEndRef} />
       </div>
 
       {/* Input */}
-      <div className="p-4 border-t border-gray-200 bg-white">
+      <div className="p-4 border-t border-gray-700/50 bg-gray-900/80">
         <form onSubmit={handleSubmit} className="flex space-x-2">
           <input
             type="text"
@@ -129,15 +136,22 @@ export function ProposalChat({
             onChange={(e) => setInput(e.target.value)}
             disabled={isRefining}
             placeholder="Type your feedback..."
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+            className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-900 disabled:cursor-not-allowed"
           />
-          <button
+          <motion.button
             type="submit"
             disabled={!input.trim() || isRefining}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+            className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg text-sm font-medium hover:from-blue-600 hover:to-indigo-700 disabled:from-gray-700 disabled:to-gray-700 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+            whileHover={{ scale: !input.trim() || isRefining ? 1 : 1.02 }}
+            whileTap={{ scale: !input.trim() || isRefining ? 1 : 0.98 }}
           >
+            {isRefining ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Send className="w-4 h-4" />
+            )}
             {isRefining ? 'Refining...' : 'Send'}
-          </button>
+          </motion.button>
         </form>
         <p className="text-xs text-gray-500 mt-2">
           Press Enter to send. Your feedback will trigger a new AI iteration.

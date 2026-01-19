@@ -7,6 +7,11 @@ import { SectionType } from '../versions/dto/section.dto';
 import { SectionProposal } from './dto/proposal.dto';
 import { SendChatDto, ChatResponseDto } from './dto/chat.dto';
 import OpenAI from 'openai';
+import ModelClient, { isUnexpected } from '@azure-rest/ai-inference';
+import { AzureKeyCredential } from '@azure/core-auth';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { AIModelProvider } from '@prisma/client';
+import { ApiKeysService } from '../api-keys/api-keys.service';
 
 /**
  * AI Jobs Service
@@ -30,8 +35,9 @@ export class AiJobsService {
     private readonly prisma: PrismaService,
     private readonly sectionsService: SectionsService,
     private readonly latexParser: LatexParserService,
+    private readonly apiKeysService: ApiKeysService,
   ) {
-    // Initialize Nebius AI client
+    // Initialize default Nebius AI client
     this.aiClient = new OpenAI({
       baseURL: 'https://api.tokenfactory.nebius.com/v1/',
       apiKey: process.env.NEBIUS_API_KEY,
@@ -39,6 +45,122 @@ export class AiJobsService {
       maxRetries: 2,
     });
   }
+
+  /**
+   * Call AI completion API with the appropriate provider
+   * Supports DeepSeek (Nebius), Azure OpenAI, and Gemini
+   */
+  private async callAiCompletion(
+    userId: string,
+    modelProvider: AIModelProvider | undefined,
+    systemPrompt: string,
+    userPrompt: string,
+  ): Promise<string> {
+    const provider = modelProvider || AIModelProvider.DEEPSEEK;
+
+    if (provider === AIModelProvider.GEMINI) {
+      // Get user's Gemini API key
+      const apiKey = await this.apiKeysService.getUserApiKey(userId, AIModelProvider.GEMINI);
+      
+      if (!apiKey || !apiKey.isValid) {
+        throw new BadRequestException(
+          'Valid Gemini API key required. Please configure your API key in settings.',
+        );
+      }
+
+      try {
+        console.log(`[Gemini] Using model: gemini-2.5-flash-lite`);
+        console.log(`[Gemini] System prompt length: ${systemPrompt.length}`);
+        console.log(`[Gemini] User prompt length: ${userPrompt.length}`);
+        
+        const genAI = new GoogleGenerativeAI(apiKey.apiKey);
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
+
+        const prompt = `${systemPrompt}\n\n${userPrompt}`;
+
+        console.log(`[Gemini] Starting API call...`);
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const content = response.text();
+
+        console.log(`[Gemini] Success, content length: ${content.length}`);
+        return content;
+      } catch (error) {
+        console.error(`[Gemini] Exception:`, error);
+        throw new BadRequestException(`Gemini API error: ${error.message}`);
+      }
+    } else if (provider === AIModelProvider.AZURE_OPENAI) {
+      // Get user's Azure OpenAI API key
+      const apiKey = await this.apiKeysService.getUserApiKey(userId, AIModelProvider.AZURE_OPENAI);
+      
+      if (!apiKey || !apiKey.isValid) {
+        throw new BadRequestException(
+          'Valid Azure OpenAI API key required. Please configure your API key in settings.',
+        );
+      }
+
+      try {
+        console.log(`[Azure OpenAI] Calling endpoint: ${apiKey.endpoint}`);
+        console.log(`[Azure OpenAI] Model: openai/gpt-5`);
+        console.log(`[Azure OpenAI] System prompt length: ${systemPrompt.length}`);
+        console.log(`[Azure OpenAI] User prompt length: ${userPrompt.length}`);
+        
+        const client = ModelClient(apiKey.endpoint, new AzureKeyCredential(apiKey.apiKey));
+
+        // Add timeout wrapper (30 seconds - GitHub Models should be fast)
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => {
+            console.error(`[Azure OpenAI] Request timed out after 30 seconds`);
+            reject(new Error('Request timeout after 30 seconds'));
+          }, 30000);
+        });
+
+        console.log(`[Azure OpenAI] Starting API call...`);
+        const apiCallPromise = client.path('/chat/completions').post({
+          body: {
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt },
+            ],
+            model: 'openai/gpt-5',
+            max_completion_tokens: 8000,
+          }as any,
+        });
+
+        const response = await Promise.race([apiCallPromise, timeoutPromise]) as any;
+
+        console.log(`[Azure OpenAI] Response received`);
+        console.log(`[Azure OpenAI] Response status: ${response.status}`);
+
+        if (isUnexpected(response)) {
+          const errorMsg = response.body?.error?.message || 'Azure OpenAI API call failed';
+          console.error(`[Azure OpenAI] Error: ${errorMsg}`);
+          throw new Error(errorMsg);
+        }
+
+        const content = response.body.choices[0]?.message?.content || '';
+        console.log(`[Azure OpenAI] Success, content length: ${content.length}`);
+        return content;
+      } catch (error) {
+        console.error(`[Azure OpenAI] Exception:`, error);
+        throw new BadRequestException(`Azure OpenAI API error: ${error.message}`);
+      }
+    } else {
+      // DeepSeek (Nebius) - default provider
+      const response = await this.aiClient.chat.completions.create({
+        model: 'deepseek-ai/DeepSeek-V3-0324-fast',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: 0.7,
+        max_tokens: 4000,
+      });
+
+      return response.choices[0]?.message?.content || '';
+    }
+  }
+
   /**
    * Start AI tailoring job
    * From apis.md Section 6.1
@@ -114,7 +236,7 @@ export class AiJobsService {
 
     // PHASE 6: Execute AI job immediately (synchronous for now)
     // TODO: Move to background queue in future phase
-    await this.executeAiJob(aiJob.id, userInstructions);
+    await this.executeAiJob(aiJob.id, userId, startTailoringDto.modelProvider, userInstructions);
 
     return {
       jobId: aiJob.id,
@@ -140,9 +262,16 @@ export class AiJobsService {
    * - Section-level diff enables granular accept/reject
    * 
    * @param jobId - AI job ID
+   * @param userId - User ID for API key lookup
+   * @param modelProvider - Optional AI model provider (defaults to DEEPSEEK)
    * @param userInstructions - Optional custom instructions from Edit Mode
    */
-  private async executeAiJob(jobId: string, userInstructions?: string): Promise<void> {
+  private async executeAiJob(
+    jobId: string,
+    userId: string,
+    modelProvider?: AIModelProvider,
+    userInstructions?: string,
+  ): Promise<void> {
     try {
       // Update status to RUNNING
       await this.prisma.aIJob.update({
@@ -184,6 +313,8 @@ export class AiJobsService {
         allSections,
         aiJob.jd?.rawText || null,
         aiJob.mode,
+        userId,
+        modelProvider,
         userInstructions,
       );
 
@@ -224,93 +355,6 @@ export class AiJobsService {
           errorMessage: error instanceof Error ? error.message : 'Unknown error',
         },
       });
-    }
-  }
-
-  /**
-   * Generate proposed resume content
-   * PHASE 9: REAL AI IMPLEMENTATION (Nebius AI)
-   * 
-   * Uses Nebius AI API (OpenAI-compatible) to tailor resume
-   * Based on job description and optimization mode
-   */
-  private async generateProposedResume(
-    baseLatexContent: string,
-    jdRawText: string,
-    mode: string,
-  ): Promise<string> {
-    try {
-      // Build mode-specific instructions
-      const modeInstructions = this.getModeInstructions(mode);
-
-      // System prompt: Define AI behavior and constraints
-      const systemPrompt = `You are an expert resume optimization assistant specializing in LaTeX resume tailoring.
-
-Your task:
-- Analyze the provided job description
-- Modify the LaTeX resume to align with the job requirements
-- Preserve ALL LaTeX structure, formatting, and commands
-- Only modify content (text within LaTeX commands), NEVER change LaTeX syntax
-- Focus on: relevant skills, experience framing, keyword optimization
-
-Constraints:
-- Output ONLY valid LaTeX code
-- Do NOT add explanations or markdown
-- Do NOT change document class, packages, or formatting
-- Do NOT invent experience or skills
-- Do NOT remove sections entirely
-
-${modeInstructions}`;
-
-      // User prompt: Provide context and specific request
-      const userPrompt = `Base Resume (LaTeX):
-\`\`\`latex
-${baseLatexContent}
-\`\`\`
-
-Job Description:
-\`\`\`
-${jdRawText}
-\`\`\`
-
-Please generate an optimized version of this resume tailored for the above job description. Return ONLY the complete LaTeX code.`;
-
-      // Call Nebius AI API
-      const response = await this.aiClient.chat.completions.create({
-        model: 'deepseek-ai/DeepSeek-V3-0324-fast',
-        messages: [
-          {
-            role: 'system',
-            content: systemPrompt,
-          },
-          {
-            role: 'user',
-            content: userPrompt,
-          },
-        ],
-        temperature: 0.7,
-        max_tokens: 4000,
-      });
-
-      // Extract generated content
-      const proposedLatexContent = response.choices[0]?.message?.content;
-
-      if (!proposedLatexContent) {
-        throw new Error('AI service returned empty response');
-      }
-
-      // Clean up response (remove markdown code blocks if present)
-      const cleanedContent = this.cleanAIResponse(proposedLatexContent);
-
-      return cleanedContent;
-    } catch (error) {
-      // Log error details
-      console.error('AI resume generation failed:', error);
-
-      // Re-throw with user-friendly message
-      throw new Error(
-        `Failed to generate AI proposal: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
     }
   }
 
@@ -440,12 +484,17 @@ Please generate an optimized version of this resume tailored for the above job d
    * @param allSections - All sections (for context/order)
    * @param jdRawText - Job description
    * @param mode - AI optimization mode
+   * @param userId - User ID for API key lookup
+   * @param modelProvider - AI model provider to use
+   * @param userInstructions - Custom instructions from Edit Mode
    */
   private async generateSectionProposals(
     unlockedSections: any[],
     allSections: any[],
     jdRawText: string | null,
     mode: string,
+    userId: string,
+    modelProvider?: AIModelProvider,
     userInstructions?: string,
   ): Promise<SectionProposal[]> {
     const proposals: SectionProposal[] = [];
@@ -476,6 +525,8 @@ Please generate an optimized version of this resume tailored for the above job d
           sectionType,
           jdRawText,
           mode,
+          userId,
+          modelProvider,
           userInstructions,
         );
 
@@ -504,6 +555,8 @@ Please generate an optimized version of this resume tailored for the above job d
     sectionType: SectionType,
     jdRawText: string | null,
     mode: string,
+    userId: string,
+    modelProvider?: AIModelProvider,
     userInstructions?: string,
   ): Promise<string> {
     try {
@@ -519,6 +572,16 @@ Please generate an optimized version of this resume tailored for the above job d
 Your task: Optimize the ${sectionType} section of a resume${jdRawText ? ' to better match a job description' : ''}.
 
 ${modeInstructions}${customInstructionsContext}
+
+CRITICAL FACTUAL INTEGRITY RULE (HIGHEST PRIORITY):
+⚠️ NEVER invent, fabricate, or add information that is not already present in the original resume.
+- Do NOT create new skills, technologies, or qualifications the user never claimed
+- Do NOT add projects, achievements, or experiences that don't exist in the original
+- Do NOT exaggerate scope or impact beyond what's factually stated
+- ONLY rephrase, reorganize, or emphasize EXISTING information to match the job description
+- If the resume lacks a required skill from the JD, DO NOT add it - leave it absent
+
+Your role is to REFINE PRESENTATION, not to create fictional qualifications.
 
 OPTIMIZATION GUIDELINES:
 1. **JD Alignment:** Adjust content to reflect the job description's skills and experience requirements.
@@ -567,26 +630,15 @@ ${originalContent}
 
 Optimize this section${jdRawText ? ' to better match the job description' : ''}. Return ONLY the LaTeX code for this section. Preserve ALL LaTeX commands exactly.`;
 
-      // Call AI API with conservative settings
+      // Call AI with appropriate provider
       console.log(`Calling AI for section: ${sectionType}, content length: ${originalContent.length}`);
       
-      const response = await this.aiClient.chat.completions.create({
-        model: 'deepseek-ai/DeepSeek-V3-0324-fast',
-        messages: [
-          {
-            role: 'system',
-            content: systemPrompt,
-          },
-          {
-            role: 'user',
-            content: userPrompt,
-          },
-        ],
-        temperature: 0.5, // Lower temperature for more conservative output
-        max_tokens: 2000,
-      });
-
-      const generatedContent = response.choices[0]?.message?.content;
+      const generatedContent = await this.callAiCompletion(
+        userId,
+        modelProvider,
+        systemPrompt,
+        userPrompt,
+      );
       
       console.log(`AI response for ${sectionType}: ${generatedContent ? `${generatedContent.length} chars` : 'EMPTY'}`);
 
@@ -967,7 +1019,7 @@ Optimize this section${jdRawText ? ' to better match the job description' : ''}.
     // Start async processing with chat context
     // TODO: GOAL 6 - Store feedback in AIJob for auditability
     // For now, we reuse existing processing but with modified prompt
-    this.executeAiJob(newJob.id)
+    this.executeAiJob(newJob.id, userId)
       .catch((error) => {
         console.error(`AI job ${newJob.id} failed:`, error);
         this.prisma.aIJob
@@ -1159,20 +1211,16 @@ Be helpful, specific, and actionable. Use examples when helpful.`;
         content: contextualMessage,
       });
 
-      // Call AI
-      const response = await this.aiClient.chat.completions.create({
-        model: 'deepseek-ai/DeepSeek-V3-0324-fast',
-        messages,
-        temperature: 0.7,
-        max_tokens: 2048, // Increased to allow reasoning models to complete
-      });
-
-      // Check both content and reasoning_content (some models use reasoning mode)
-      const messageObj = response.choices[0]?.message;
-      const assistantMessage = messageObj?.content || (messageObj as any)?.reasoning_content;
+      // Call AI (chat always uses DeepSeek for now)
+      const assistantMessage = await this.callAiCompletion(
+        userId,
+        AIModelProvider.DEEPSEEK,
+        systemPrompt,
+        contextualMessage,
+      );
       
       if (!assistantMessage) {
-        console.error('No message content in AI response. Full response:', response);
+        console.error('No message content in AI response.');
         throw new Error('AI did not return a valid response');
       }
 

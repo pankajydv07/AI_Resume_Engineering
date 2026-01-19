@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
+import { ThemeProvider } from "next-themes";
+import { Toaster } from "sonner";
 import { ToastProvider } from "@/components/ui/Toast";
+import { FloatingNavbar } from "@/components/ui/floating-navbar";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -17,11 +20,20 @@ export default function RootLayout({
     <ClerkProvider 
       publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
     >
-      <html lang="en">
-        <body>
-          <ToastProvider>
-            {children}
-          </ToastProvider>
+      <html lang="en" suppressHydrationWarning>
+        <body className="min-h-screen bg-background antialiased">
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="dark"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <FloatingNavbar />
+            <ToastProvider>
+              {children}
+            </ToastProvider>
+            <Toaster position="top-right" richColors />
+          </ThemeProvider>
         </body>
       </html>
     </ClerkProvider>

@@ -1,4 +1,5 @@
 import { IsUUID, IsEnum, IsArray, IsOptional, IsString } from 'class-validator';
+import { AIModelProvider } from '@prisma/client';
 
 /**
  * DTO for starting AI tailoring job
@@ -25,6 +26,10 @@ export class StartAiTailoringDto {
   @IsString()
   @IsOptional()
   userInstructions?: string;
+
+  @IsEnum(AIModelProvider)
+  @IsOptional()
+  modelProvider?: AIModelProvider;
 }
 
 /**

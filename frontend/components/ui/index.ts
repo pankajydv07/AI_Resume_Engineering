@@ -9,3 +9,6 @@ export {
   Skeleton,
   type BackgroundProcess 
 } from './Loading';
+export { GradientAIChatInput } from './gradient-ai-chat-input';
+export { ModeSwitcher } from './mode-switcher';
+export { FloatingNavbar } from './floating-navbar';

@@ -49,6 +49,12 @@ enum AIMode {
   AGGRESSIVE
 }
 
+enum AIModelProvider {
+  DEEPSEEK
+  AZURE_OPENAI
+  GEMINI
+}
+
 // ============================================
 // MODELS (from database.md Section 4)
 // ============================================
@@ -65,6 +71,7 @@ model User {
 
   // Relations
   projects ResumeProject[]
+  apiKeys  UserAPIKey[]
 }
 
 /// ResumeProject (database.md Section 4.2)
@@ -242,4 +249,39 @@ model VersionDiff {
   // Relations with explicit delete behavior
   fromVersion ResumeVersion @relation("DiffFrom", fields: [fromVersionId], references: [id], onDelete: Restrict)
   toVersion   ResumeVersion @relation("DiffTo", fields: [toVersionId], references: [id], onDelete: Restrict)
+}
+
+/// UserAPIKey (database.md Section 4.8)
+/// Stores user's AI model provider API keys
+/// Purpose:
+/// - Store user's personal AI provider credentials
+/// - Enable model selection (DeepSeek vs Azure OpenAI)
+/// - Validate API keys before use
+///
+/// Rules:
+/// - One key per provider per user
+/// - API keys are stored as plain strings (encryption at transport layer)
+/// - isValid tracks last validation status
+/// - validationError stores last error message if invalid/expired
+/// - endpoint allows custom Azure OpenAI endpoint URLs
+///
+/// Notes:
+/// - AZURE_OPENAI requires: apiKey + endpoint
+/// - DEEPSEEK uses system-wide Nebius credentials (no user key needed)
+model UserAPIKey {
+  id               String            @id @default(uuid())
+  userId           String
+  provider         AIModelProvider
+  apiKey           String
+  endpoint         String?
+  isValid          Boolean           @default(true)
+  lastValidated    DateTime?
+  validationError  String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
 }
