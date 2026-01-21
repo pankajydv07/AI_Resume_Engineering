@@ -69,3 +69,5 @@ backend/prisma/migrations/
 *.out
 *.toc
 *.synctex.gz
+.github/workflows/SETUP.md
+VERCEL_DEPLOY.md

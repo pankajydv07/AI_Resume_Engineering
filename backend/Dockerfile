@@ -42,6 +42,7 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/prisma ./prisma
+COPY start.sh ./start.sh
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs
@@ -49,6 +50,7 @@ RUN adduser --system --uid 1001 nestjs
 
 # Change ownership of files
 RUN chown -R nestjs:nodejs /app
+RUN chmod +x /app/start.sh
 
 USER nestjs
 
@@ -56,6 +58,5 @@ USER nestjs
 ENV PORT=8080
 EXPOSE 8080
 
-# Start the server without running migrations
-# Migrations should be run separately via Cloud Build or manually
-CMD ["node", "dist/main"]
+# Run migrations and start the server
+CMD ["./start.sh"]
