@@ -41,33 +41,37 @@ export default function SignUpPage() {
           </p>
         </div>
         
-        {/* Clerk sign-up with enhanced container */}
-        <div className="backdrop-blur-xl bg-gray-900/50 p-8 rounded-2xl border border-white/10 w-full">
-          <SignUp 
-            appearance={{
-              elements: {
-                formButtonPrimary: "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500",
-                card: "bg-transparent shadow-none",
-                headerTitle: "text-white",
-                headerSubtitle: "text-gray-400",
-                socialButtonsBlockButton: "bg-white/5 border-white/10 hover:bg-white/10 text-white",
-                formFieldLabel: "text-gray-300",
-                formFieldInput: "bg-white/5 border-white/10 text-white",
-                footerActionLink: "text-purple-400 hover:text-purple-300",
-                identityPreviewText: "text-white",
-                identityPreviewEditButton: "text-purple-400",
-              }
-            }}
-          />
-        </div>
-        
-        {/* Footer text */}
-        <p className="mt-6 text-center text-sm text-gray-500">
-          Already have an account?{" "}
-          <a href="/sign-in" className="text-purple-400 hover:text-purple-300 font-medium">
-            Sign in
-          </a>
-        </p>
+        {/* Clerk sign-up component */}
+        <SignUp 
+          appearance={{
+            variables: {
+              colorPrimary: '#a855f7',
+              colorBackground: '#111827',
+              colorInputBackground: 'rgba(255, 255, 255, 0.05)',
+              colorInputText: '#ffffff',
+              colorText: '#ffffff',
+              colorTextSecondary: '#9ca3af',
+              borderRadius: '0.75rem',
+            },
+            elements: {
+              card: 'backdrop-blur-xl bg-gray-900/50 border border-white/10 shadow-2xl',
+              headerTitle: 'text-white text-2xl font-bold',
+              headerSubtitle: 'text-gray-400',
+              socialButtonsBlockButton: 'bg-white/5 border-white/10 hover:bg-white/10 text-white transition-all',
+              socialButtonsBlockButtonText: 'text-white font-medium',
+              formButtonPrimary: 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-medium shadow-lg shadow-purple-500/25 transition-all',
+              formFieldLabel: 'text-gray-300 font-medium',
+              formFieldInput: 'bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20',
+              footerActionLink: 'text-purple-400 hover:text-purple-300 font-medium',
+              footerActionText: 'text-gray-500',
+              dividerLine: 'bg-white/10',
+              dividerText: 'text-gray-500',
+              formFieldInputShowPasswordButton: 'text-gray-400 hover:text-gray-300',
+              identityPreviewText: 'text-white',
+              identityPreviewEditButton: 'text-purple-400 hover:text-purple-300',
+            }
+          }}
+        />
       </div>
     </main>
   );
