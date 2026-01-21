@@ -48,7 +48,7 @@ export class AiJobsService {
 
   /**
    * Call AI completion API with the appropriate provider
-   * Supports DeepSeek (Nebius), Azure OpenAI, and Gemini
+   * Supports Qwen (Nebius), Azure OpenAI, and Gemini
    */
   private async callAiCompletion(
     userId: string,
@@ -56,7 +56,7 @@ export class AiJobsService {
     systemPrompt: string,
     userPrompt: string,
   ): Promise<string> {
-    const provider = modelProvider || AIModelProvider.DEEPSEEK;
+    const provider = modelProvider || AIModelProvider.QWEN;
 
     if (provider === AIModelProvider.GEMINI) {
       // Get user's Gemini API key
@@ -146,9 +146,9 @@ export class AiJobsService {
         throw new BadRequestException(`Azure OpenAI API error: ${error.message}`);
       }
     } else {
-      // DeepSeek (Nebius) - default provider
+      // Qwen (Nebius) - default provider
       const response = await this.aiClient.chat.completions.create({
-        model: 'deepseek-ai/DeepSeek-V3-0324-fast',
+        model: 'Qwen/Qwen3-Next-80B-A3B-Thinking',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
@@ -263,7 +263,7 @@ export class AiJobsService {
    * 
    * @param jobId - AI job ID
    * @param userId - User ID for API key lookup
-   * @param modelProvider - Optional AI model provider (defaults to DEEPSEEK)
+   * @param modelProvider - Optional AI model provider (defaults to QWEN)
    * @param userInstructions - Optional custom instructions from Edit Mode
    */
   private async executeAiJob(
@@ -1295,10 +1295,10 @@ Be helpful, specific, and actionable. Use examples when helpful.`;
         content: contextualMessage,
       });
 
-      // Call AI (chat always uses DeepSeek for now)
+      // Call AI (chat always uses Qwen for now)
       const assistantMessage = await this.callAiCompletion(
         userId,
-        AIModelProvider.DEEPSEEK,
+        AIModelProvider.QWEN,
         systemPrompt,
         contextualMessage,
       );

@@ -267,7 +267,7 @@ Triggered from Resume Editor.
   - Projects
   - Skills
 - AI Model Selection:
-  - DeepSeek (default, free)
+  - Qwen (default, free)
   - Azure OpenAI openai/gpt-5 (requires API key)
 
 **Purpose**

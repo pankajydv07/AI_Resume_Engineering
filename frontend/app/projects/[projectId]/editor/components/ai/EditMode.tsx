@@ -58,7 +58,7 @@ export function EditMode({
   onRemoveJd,
 }: EditModeProps) {
   const [instruction, setInstruction] = useState('');
-  const [modelProvider, setModelProvider] = useState<'DEEPSEEK' | 'AZURE_OPENAI' | 'GEMINI'>('DEEPSEEK');
+  const [modelProvider, setModelProvider] = useState<'QWEN' | 'AZURE_OPENAI' | 'GEMINI'>('QWEN');
   const [hasAzureKey, setHasAzureKey] = useState(false);
   const [hasGeminiKey, setHasGeminiKey] = useState(false);
   const [checkingAzureKey, setCheckingAzureKey] = useState(true);
@@ -488,7 +488,7 @@ export function EditMode({
               }
             }}
             dropdownOptions={[
-              { id: 'deepseek', label: 'DeepSeek', value: 'DEEPSEEK' },
+              { id: 'qwen', label: 'Qwen', value: 'QWEN' },
               { id: 'gemini', label: 'Gemini', value: 'GEMINI' },
               { id: 'azure', label: 'Azure GPT-5', value: 'AZURE_OPENAI' }
             ]}
@@ -502,7 +502,7 @@ export function EditMode({
                 alert('Please add Gemini API key in Settings first');
                 return;
               }
-              setModelProvider(option.value as 'DEEPSEEK' | 'AZURE_OPENAI' | 'GEMINI');
+              setModelProvider(option.value as 'QWEN' | 'AZURE_OPENAI' | 'GEMINI');
             }}
             customButtons={
               <>

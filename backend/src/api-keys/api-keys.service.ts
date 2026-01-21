@@ -122,11 +122,11 @@ export class ApiKeysService {
   ): Promise<ValidateApiKeyResponseDto> {
     const now = new Date();
 
-    if (provider === AIModelProvider.DEEPSEEK) {
-      // DEEPSEEK uses system credentials, user keys not supported
+    if (provider === AIModelProvider.QWEN) {
+      // QWEN uses system credentials, user keys not supported
       return {
         isValid: false,
-        validationError: 'DEEPSEEK provider does not require user API keys',
+        validationError: 'QWEN provider does not require user API keys',
         lastValidated: now,
       };
     }

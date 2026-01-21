@@ -251,7 +251,7 @@ Stores user's AI model provider API keys.
 
 Purpose:
 - Store user's personal AI provider credentials
-- Enable model selection (DeepSeek vs Azure OpenAI)
+- Enable model selection (Qwen vs Azure OpenAI)
 - Validate API keys before use
 
 Rules:
@@ -263,7 +263,7 @@ Rules:
 
 Notes:
 - AZURE_OPENAI requires: apiKey + endpoint
-- DEEPSEEK uses system-wide Nebius credentials (no user key needed)
+- QWEN uses system-wide Nebius credentials (no user key needed)
 
 ---
 

@@ -225,7 +225,7 @@ Copy code
   "jdId": "uuid",
   "mode": "MINIMAL | BALANCED | AGGRESSIVE",
   "lockedSections": ["EDUCATION", "PROJECTS"],
-  "modelProvider": "DEEPSEEK | AZURE_OPENAI"
+  "modelProvider": "QWEN | AZURE_OPENAI"
 }
 Response:
 
@@ -240,7 +240,7 @@ Async only
 
 No blocking responses
 
-modelProvider is optional (defaults to DEEPSEEK)
+modelProvider is optional (defaults to QWEN)
 
 If AZURE_OPENAI is selected, user must have valid API key configured
 
