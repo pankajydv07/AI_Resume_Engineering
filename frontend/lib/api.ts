@@ -19,9 +19,10 @@
 
 /**
  * Backend API base URL
- * Falls back to localhost if env variable not set (development default)
+ * - Production (Vercel): Uses proxy, so empty string
+ * - Development: Falls back to localhost
  */
-export const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || '';
 
 /**
  * Helper function to build API URLs
@@ -33,6 +34,11 @@ export const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://local
 export function apiUrl(path: string): string {
   // Ensure path starts with /
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  
+  // If no base URL (production with proxy), return path only
+  if (!API_BASE_URL) {
+    return cleanPath;
+  }
   
   // Remove trailing slash from base URL if present
   const baseUrl = API_BASE_URL.endsWith('/') 
