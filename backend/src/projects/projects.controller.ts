@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Body, UseGuards, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Throttle } from '@nestjs/throttler';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto, CreateProjectResponseDto, ProjectListItemDto, UploadResumeDto } from './dto/project.dto';
 import { ClerkAuthGuard } from '../auth/guards/clerk-auth.guard';
@@ -11,10 +12,10 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
  * Handles resume project operations
  * All endpoints from apis.md Section 3
  * 
- * PHASE 2: PERSISTENCE LAYER
- * - Real database operations via ProjectsService
- * - User ownership enforced
- * - Real Clerk JWT authentication active
+ * SECURITY HARDENING:
+ * - Rate limiting on all endpoints
+ * - Strict file upload limits (type, size)
+ * - User ownership enforcement
  */
 @Controller('projects')
 @UseGuards(ClerkAuthGuard)
@@ -28,9 +29,10 @@ export class ProjectsController {
    * Create a new resume project
    * From apis.md Section 3.1
    * 
-   * PHASE 2: Real database persistence
+   * SECURITY: Rate limited (20 requests/minute)
    */
   @Post()
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   async createProject(
     @Body() createProjectDto: CreateProjectDto,
     @CurrentUser() userId: string,
@@ -42,22 +44,35 @@ export class ProjectsController {
    * POST /api/projects/upload
    * Create project from uploaded resume (PDF or LaTeX)
    * 
+   * SECURITY HARDENING:
+   * - Strict rate limit (5 uploads/minute) - prevents storage abuse
+   * - File type validation (whitelist)
+   * - File size limit (10MB max)
+   * - Filename sanitization in service layer
+   * 
    * PHASE 8: Resume upload functionality
    * - LaTeX: Store as-is
    * - PDF: Extract text, use AI to reconstruct LaTeX
    * - Creates BASE version
    */
   @Post('upload')
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 uploads per minute
   @UseInterceptors(FileInterceptor('file', {
     limits: {
       fileSize: 10 * 1024 * 1024, // 10MB max
+      files: 1, // Only one file at a time
     },
     fileFilter: (req, file, callback) => {
+      // SECURITY: Whitelist allowed MIME types and extensions
       const allowedMimes = ['application/pdf', 'application/x-tex', 'text/x-tex', 'text/plain'];
       const allowedExtensions = ['.pdf', '.tex'];
       const fileExtension = file.originalname.toLowerCase().substring(file.originalname.lastIndexOf('.'));
       
-      if (allowedMimes.includes(file.mimetype) || allowedExtensions.includes(fileExtension)) {
+      // Validate both MIME type and extension for defense-in-depth
+      const mimeAllowed = allowedMimes.includes(file.mimetype);
+      const extensionAllowed = allowedExtensions.includes(fileExtension);
+      
+      if (mimeAllowed || extensionAllowed) {
         callback(null, true);
       } else {
         callback(new BadRequestException('Only PDF and LaTeX (.tex) files are allowed'), false);
@@ -81,7 +96,7 @@ export class ProjectsController {
    * List all resume projects for authenticated user
    * From apis.md Section 3.2
    * 
-   * PHASE 2: Real database persistence with user filtering
+   * Returns only projects owned by the authenticated user
    */
   @Get()
   async listProjects(

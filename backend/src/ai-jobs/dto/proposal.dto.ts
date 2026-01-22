@@ -1,4 +1,4 @@
-import { IsUUID, IsArray, IsOptional } from 'class-validator';
+import { IsUUID, IsArray, IsOptional, IsEnum, ArrayMaxSize } from 'class-validator';
 import { SectionType } from '../../versions/dto/section.dto';
 
 /**
@@ -15,16 +15,22 @@ export interface SectionProposal {
  * DTO for accepting AI proposal
  * PHASE 6: Proposal acceptance
  * GOAL 3: Enhanced with selective section acceptance
+ * 
+ * SECURITY VALIDATION:
+ * - All IDs must be valid UUIDs
+ * - Accepted sections limited to prevent abuse
  */
 export class AcceptProposalDto {
-  @IsUUID()
+  @IsUUID('4', { message: 'AI job ID must be a valid UUID' })
   aiJobId: string;
 
-  @IsUUID()
+  @IsUUID('4', { message: 'Project ID must be a valid UUID' })
   projectId: string;
 
   @IsOptional()
-  @IsArray()
+  @IsArray({ message: 'Accepted sections must be an array' })
+  @ArrayMaxSize(20, { message: 'Cannot accept more than 20 sections' })
+  @IsEnum(SectionType, { each: true, message: 'Invalid section type' })
   acceptedSections?: SectionType[]; // If provided, accept only these sections
 }
 
@@ -39,9 +45,12 @@ export class AcceptProposalResponseDto {
 /**
  * DTO for rejecting AI proposal
  * PHASE 6: Proposal rejection
+ * 
+ * SECURITY VALIDATION:
+ * - AI job ID must be valid UUID
  */
 export class RejectProposalDto {
-  @IsUUID()
+  @IsUUID('4', { message: 'AI job ID must be a valid UUID' })
   aiJobId: string;
 }
 

@@ -1,5 +1,6 @@
 import { Controller, Get, Put, Post, Param, Body, Query, Res, UseGuards } from '@nestjs/common';
 import { Response } from 'express';
+import { Throttle } from '@nestjs/throttler';
 import { ClerkAuthGuard } from '../auth/guards/clerk-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { VersionsService } from './versions.service';
@@ -18,10 +19,10 @@ import {
  * Handles resume version operations
  * All endpoints from apis.md Sections 4, 7, 8
  * 
- * PHASE 2: PERSISTENCE LAYER
- * - ClerkAuthGuard active (mock auth, real DB users)
- * - Ownership verified via project relationship
- * - Real database operations for get/save
+ * SECURITY HARDENING:
+ * - Rate limiting on write operations
+ * - Input validation via DTOs
+ * - User ownership enforcement via project relationship
  */
 @Controller('versions')
 @UseGuards(ClerkAuthGuard)
@@ -52,7 +53,7 @@ export class VersionsController {
    * Get a specific resume version
    * From apis.md Section 4.1
    * 
-   * PHASE 2: Real database query with ownership verification
+   * Returns version with full LaTeX content
    */
   @Get(':versionId')
   async getVersion(
@@ -67,12 +68,13 @@ export class VersionsController {
    * Save manual resume edit (creates new MANUAL version)
    * From apis.md Section 4.2
    * 
+   * SECURITY: Rate limited (30 requests/minute)
+   * 
    * Important: NEVER overwrites existing version
    * Creates new version with parentVersionId
-   * 
-   * PHASE 2: Real database operation, creates new version
    */
   @Put(':versionId')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   async saveEdit(
     @Param('versionId') versionId: string,
     @Body() saveEditDto: SaveResumeEditDto,
@@ -86,9 +88,10 @@ export class VersionsController {
    * Compile resume version to PDF
    * From apis.md Section 4.3
    * 
-   * PHASE 2: Placeholder only (compilation in PHASE 4)
+   * SECURITY: Rate limited (10 requests/minute) - CPU-intensive operation
    */
   @Post(':versionId/compile')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   async compileVersion(
     @Param('versionId') versionId: string,
     @CurrentUser() userId: string,
@@ -100,8 +103,6 @@ export class VersionsController {
    * GET /api/versions/diff
    * Get diff between two versions
    * From apis.md Section 7.1
-   * 
-   * PHASE 2: Placeholder only (diff logic in PHASE 4)
    */
   @Get('diff')
   async getVersionDiff(
@@ -117,8 +118,7 @@ export class VersionsController {
    * Download PDF version
    * From apis.md Section 8.1
    * 
-   * PHASE 8: Returns Cloudinary URL for direct download
-   * Frontend will redirect to this URL
+   * Returns Cloudinary URL for direct download
    */
   @Get(':versionId/download/pdf')
   async downloadPdf(
@@ -135,8 +135,7 @@ export class VersionsController {
    * Download LaTeX source
    * From apis.md Section 8.2
    * 
-   * PHASE 8: Returns LaTeX content with proper headers
-   * Browser will trigger download via Content-Disposition header
+   * Returns LaTeX content with proper headers
    */
   @Get(':versionId/download/latex')
   async downloadLatex(

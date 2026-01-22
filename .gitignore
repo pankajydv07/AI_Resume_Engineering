@@ -14,12 +14,31 @@ build/
 .next/
 out/
 
-# Environment variables
+# Environment variables - SECURITY CRITICAL
+# These files contain secrets and should NEVER be committed
 .env
+.env.*
+!.env.example
 .env.local
+.env.development
 .env.development.local
+.env.test
 .env.test.local
+.env.production
 .env.production.local
+*/.env
+*/.*env*
+!*/.env.example
+
+# Backend specific env files
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# Frontend specific env files
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
 
 # Logs
 logs/
@@ -71,3 +90,10 @@ backend/prisma/migrations/
 *.synctex.gz
 .github/workflows/SETUP.md
 VERCEL_DEPLOY.md
+
+# Security - Never commit these
+*.pem
+*.key
+*.crt
+secrets/
+credentials/

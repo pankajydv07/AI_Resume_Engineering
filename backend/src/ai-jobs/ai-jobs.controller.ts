@@ -1,4 +1,5 @@
 import { Controller, Post, Get, Param, Body, UseGuards } from '@nestjs/common';
+import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { ClerkAuthGuard } from '../auth/guards/clerk-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { AiJobsService } from './ai-jobs.service';
@@ -12,6 +13,11 @@ import { SendChatDto, ChatResponseDto } from './dto/chat.dto';
  * 
  * Handles AI tailoring operations
  * All endpoints from apis.md Section 6
+ * 
+ * SECURITY HARDENING:
+ * - Strict rate limiting on AI endpoints (expensive operations)
+ * - Default: 10 requests/minute for AI operations
+ * - Prevents abuse and controls API costs
  * 
  * PHASE 5: AI JOB INFRASTRUCTURE (NO REWRITING)
  * PHASE 6: AI RESUME TAILORING (PROPOSAL ONLY)
@@ -29,6 +35,8 @@ export class AiJobsController {
    * Start AI tailoring job
    * From apis.md Section 6.1
    * 
+   * SECURITY: Strict rate limit (5 requests/minute) - expensive AI operation
+   * 
    * PHASE 5: Database persistence ONLY
    * - Creates AIJob with status=QUEUED
    * - Verifies user owns project, baseVersion, and JD
@@ -39,6 +47,7 @@ export class AiJobsController {
    * - Returns jobId immediately
    */
   @Post('tailor')
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
   async startTailoring(
     @Body() startTailoringDto: StartAiTailoringDto,
     @CurrentUser() userId: string,
@@ -104,6 +113,8 @@ export class AiJobsController {
    * Accept AI proposal and create new resume version
    * PHASE 6: Proposal acceptance
    * 
+   * SECURITY: Rate limited (10 requests/minute)
+   * 
    * Behavior:
    * - Creates AI_GENERATED ResumeVersion from ProposedVersion
    * - Sets parentVersionId to baseVersionId
@@ -114,6 +125,7 @@ export class AiJobsController {
    * - No silent apply
    */
   @Post('proposal/accept')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   async acceptProposal(
     @Body() acceptProposalDto: AcceptProposalDto,
     @CurrentUser() userId: string,
@@ -131,6 +143,7 @@ export class AiJobsController {
    * - Resume remains unchanged
    */
   @Post('proposal/reject')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   async rejectProposal(
     @Body() rejectProposalDto: RejectProposalDto,
     @CurrentUser() userId: string,
@@ -141,6 +154,8 @@ export class AiJobsController {
   /**
    * POST /api/ai/proposal/refine
    * GOAL 6: Chat-driven iteration
+   * 
+   * SECURITY: Strict rate limit (5 requests/minute) - expensive AI operation
    * 
    * Refine existing proposal based on user feedback
    * 
@@ -153,6 +168,7 @@ export class AiJobsController {
    * Returns new jobId for polling
    */
   @Post('proposal/refine')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   async refineProposal(
     @Body() refineDto: { aiJobId: string; feedback: string },
     @CurrentUser() userId: string,
@@ -164,6 +180,8 @@ export class AiJobsController {
    * POST /api/ai/chat
    * Chat mode endpoint for conversational AI assistance
    * 
+   * SECURITY: Strict rate limit (10 requests/minute) - AI operation
+   * 
    * Provides resume advice, suggestions, and answers without modifying resume.
    * Stateless - frontend manages conversation history.
    * 
@@ -173,6 +191,7 @@ export class AiJobsController {
    * - Conversation history (optional)
    */
   @Post('chat')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   async chat(
     @Body() chatDto: SendChatDto,
     @CurrentUser() userId: string,

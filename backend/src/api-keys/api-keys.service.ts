@@ -5,7 +5,17 @@ import { StoreApiKeyDto, ApiKeyResponseDto, ValidateApiKeyResponseDto } from './
 import ModelClient, { isUnexpected } from '@azure-rest/ai-inference';
 import { AzureKeyCredential } from '@azure/core-auth';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { encrypt, decrypt, maskSensitiveString } from '../common/utils/encryption.util';
 
+/**
+ * API Keys Service
+ * 
+ * SECURITY HARDENING:
+ * - API keys are encrypted before storage using AES-256-GCM
+ * - Keys are decrypted only when needed for validation/use
+ * - Raw keys are NEVER logged or returned in responses
+ * - Validation prevents storing invalid keys
+ */
 @Injectable()
 export class ApiKeysService {
   constructor(private prisma: PrismaService) {}
@@ -37,12 +47,18 @@ export class ApiKeysService {
       throw new ConflictException(`API key for ${dto.provider} already exists. Delete the existing key first.`);
     }
 
-    // Store the API key
+    // SECURITY: Encrypt the API key before storing
+    const encryptedApiKey = encrypt(dto.apiKey);
+    
+    // Log masked key for audit (never log real key)
+    console.log(`[ApiKeys] Storing encrypted key for user ${userId}, provider ${dto.provider}, key: ${maskSensitiveString(dto.apiKey)}`);
+
+    // Store the encrypted API key
     const apiKey = await this.prisma.userAPIKey.create({
       data: {
         userId,
         provider: dto.provider,
-        apiKey: dto.apiKey,
+        apiKey: encryptedApiKey, // SECURITY: Encrypted
         endpoint: dto.endpoint,
         isValid: validation.isValid,
         lastValidated: validation.lastValidated,
@@ -59,6 +75,7 @@ export class ApiKeysService {
       orderBy: { createdAt: 'desc' },
     });
 
+    // SECURITY: Raw API keys are never exposed in list responses
     return apiKeys.map((key) => this.toResponseDto(key));
   }
 
@@ -71,9 +88,22 @@ export class ApiKeysService {
       throw new NotFoundException('API key not found');
     }
 
+    // SECURITY: Decrypt the API key for validation
+    let decryptedApiKey: string;
+    try {
+      decryptedApiKey = decrypt(apiKey.apiKey);
+    } catch (error) {
+      console.error(`[ApiKeys] Failed to decrypt API key ${id}:`, error.message);
+      return {
+        isValid: false,
+        validationError: 'Failed to decrypt stored API key. Please delete and re-add.',
+        lastValidated: new Date(),
+      };
+    }
+
     const validation = await this.validateApiKeyCredentials(
       apiKey.provider,
-      apiKey.apiKey,
+      decryptedApiKey,
       apiKey.endpoint,
     );
 
@@ -99,13 +129,21 @@ export class ApiKeysService {
       throw new NotFoundException('API key not found');
     }
 
+    console.log(`[ApiKeys] Deleting API key ${id} for user ${userId}, provider ${apiKey.provider}`);
+
     await this.prisma.userAPIKey.delete({
       where: { id },
     });
   }
 
+  /**
+   * Get user's API key for a provider with decrypted key
+   * 
+   * SECURITY: This method returns the decrypted key for use in AI calls
+   * Should only be called internally by services that need the actual key
+   */
   async getUserApiKey(userId: string, provider: AIModelProvider) {
-    return this.prisma.userAPIKey.findUnique({
+    const apiKey = await this.prisma.userAPIKey.findUnique({
       where: {
         userId_provider: {
           userId,
@@ -113,6 +151,22 @@ export class ApiKeysService {
         },
       },
     });
+
+    if (!apiKey) {
+      return null;
+    }
+
+    // SECURITY: Decrypt the API key for use
+    try {
+      const decryptedApiKey = decrypt(apiKey.apiKey);
+      return {
+        ...apiKey,
+        apiKey: decryptedApiKey, // Return decrypted key for use
+      };
+    } catch (error) {
+      console.error(`[ApiKeys] Failed to decrypt API key for user ${userId}, provider ${provider}:`, error.message);
+      return null;
+    }
   }
 
   private async validateApiKeyCredentials(

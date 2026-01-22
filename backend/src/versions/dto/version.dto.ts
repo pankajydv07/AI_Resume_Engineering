@@ -1,4 +1,5 @@
-import { IsString } from 'class-validator';
+import { IsString, IsNotEmpty, MaxLength, MinLength } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 /**
  * Response DTO for getting a resume version
@@ -17,9 +18,16 @@ export class ResumeVersionDto {
 /**
  * DTO for saving manual resume edit
  * From apis.md Section 4.2
+ * 
+ * SECURITY VALIDATION:
+ * - LaTeX content is required with length limits
+ * - Max 500KB of content to prevent abuse
  */
 export class SaveResumeEditDto {
-  @IsString()
+  @IsString({ message: 'LaTeX content must be a string' })
+  @IsNotEmpty({ message: 'LaTeX content is required' })
+  @MinLength(10, { message: 'LaTeX content must be at least 10 characters' })
+  @MaxLength(500000, { message: 'LaTeX content must not exceed 500000 characters (500KB)' })
   latexContent: string;
 }
 
