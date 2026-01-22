@@ -48,7 +48,7 @@ export class AiJobsService {
 
   /**
    * Call AI completion API with the appropriate provider
-   * Supports Qwen (Nebius), Azure OpenAI, and Gemini
+   * Supports Default Model (Nebius), Azure OpenAI, and Gemini
    */
   private async callAiCompletion(
     userId: string,
@@ -146,18 +146,40 @@ export class AiJobsService {
         throw new BadRequestException(`Azure OpenAI API error: ${error.message}`);
       }
     } else {
-      // Qwen (Nebius) - default provider
-      const response = await this.aiClient.chat.completions.create({
-        model: 'Qwen/Qwen3-Next-80B-A3B-Thinking',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
-        temperature: 0.7,
-        max_tokens: 4000,
-      });
+      // Default Model (Nebius) - default provider
+      try {
+        console.log(`[Default Model] Using model: openai/gpt-oss-120b`);
+        console.log(`[Default Model] System prompt length: ${systemPrompt.length}`);
+        console.log(`[Default Model] User prompt length: ${userPrompt.length}`);
+        
+        const response = await this.aiClient.chat.completions.create({
+          model: 'openai/gpt-oss-120b',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+          temperature: 0.7,
+          max_tokens: 4000,
+        });
 
-      return response.choices[0]?.message?.content || '';
+        // Standard instruct model returns content in the 'content' field
+        const message = response.choices[0]?.message as any;
+        const content = message?.content || '';
+        
+        console.log(`[Default Model] Extracted content length: ${content.length}`);
+        if (content.length > 0) {
+          console.log(`[Default Model] Content preview:`, content.substring(0, 200));
+        }
+        return content;
+      } catch (error) {
+        console.error(`[Default Model] Exception:`, error);
+        console.error(`[Default Model] Error details:`, {
+          message: error.message,
+          status: error.status,
+          type: error.type,
+        });
+        throw new BadRequestException(`Default Model API error: ${error.message}`);
+      }
     }
   }
 
@@ -1295,7 +1317,7 @@ Be helpful, specific, and actionable. Use examples when helpful.`;
         content: contextualMessage,
       });
 
-      // Call AI (chat always uses Qwen for now)
+      // Call AI (chat always uses Default Model for now)
       const assistantMessage = await this.callAiCompletion(
         userId,
         AIModelProvider.QWEN,

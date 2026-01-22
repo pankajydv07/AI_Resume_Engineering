@@ -151,6 +151,7 @@ export function EditMode({
       const result = await response.json();
       setJobId(result.jobId);
       setStatus('QUEUED');
+      setIsPolling(true); // Set polling state immediately
       setInstruction('');
 
       pollJobStatus(result.jobId);
@@ -202,6 +203,7 @@ export function EditMode({
       const result = await response.json();
       setJobId(result.jobId);
       setStatus('QUEUED');
+      setIsPolling(true); // Set polling state immediately
       setInstruction(''); // Clear input on success
 
       // Start polling
@@ -435,6 +437,19 @@ export function EditMode({
       {/* Input Area */}
       {!jobId && (
         <div className="flex-shrink-0 border-t border-gray-700/50 p-4 bg-gray-900/95 backdrop-blur-sm">
+          {isStarting && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-gradient-to-r from-blue-900/40 to-indigo-900/30 border border-blue-600/30 rounded-xl p-3 mb-4 flex items-center gap-2"
+            >
+              <Loader2 className="w-4 h-4 text-blue-400 animate-spin flex-shrink-0" />
+              <p className="text-xs text-blue-300">
+                Starting AI processing...
+              </p>
+            </motion.div>
+          )}
+          
           {!baseVersionId && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -488,7 +503,7 @@ export function EditMode({
               }
             }}
             dropdownOptions={[
-              { id: 'qwen', label: 'Qwen', value: 'QWEN' },
+              { id: 'qwen', label: 'Default Model', value: 'QWEN' },
               { id: 'gemini', label: 'Gemini', value: 'GEMINI' },
               { id: 'azure', label: 'Azure GPT-5', value: 'AZURE_OPENAI' }
             ]}
